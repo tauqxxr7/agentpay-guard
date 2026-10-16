@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+.pytest_cache/
+*.db
+node_modules/
+.next/
+test-results/
+playwright-report/
+*.tsbuildinfo
+.ruff_cache/
