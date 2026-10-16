@@ -17,8 +17,8 @@
 
 ## Not complete
 
-Genuine AI, genuine PayPal checkout, PostgreSQL testing, public repository, deployment, video, Devpost entry and final release audit remain unverified. Security limitations and incomplete product scope are recorded in KNOWN_LIMITATIONS.md. No live financial operation occurred.
+Genuine AI, genuine PayPal buyer checkout/capture, PostgreSQL testing, public repository, deployment, video, Devpost entry and final release audit remain unverified. Genuine PayPal sandbox OAuth and one uncaptured order creation were verified on October 16, 2026. Security limitations and incomplete product scope are recorded in KNOWN_LIMITATIONS.md. No live financial operation or capture occurred.
 
 ## Next milestone
 
-Owner configures ignored `.env` with sandbox and hosted-model settings. Verify AI first, then obtain explicit approval for a genuine sandbox checkout. Address deployment hardening before publishing. Do not claim hackathon readiness until all release checklist items pass.
+Owner configures the hosted-model settings in ignored `.env`. Verify AI, then obtain explicit approval for a genuine sandbox buyer checkout and capture. Address deployment hardening before publishing. Do not claim hackathon readiness until all release checklist items pass.

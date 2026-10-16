@@ -16,4 +16,4 @@ Generic API failures do not reveal provider payloads. Cancellation is displayed 
 
 No webhooks are consumed in this version. Future webhook handling must verify signatures and deduplicate event IDs before mutation. Current audit stores local timestamps, state events and order ID, never OAuth tokens, payer identity or raw API responses.
 
-**Verification status:** mocked lifecycle tests only. No genuine OAuth, order or capture has been verified. Opt-in `RUN_SANDBOX_SMOKE=true` runs only an OAuth test; checkout still requires human buyer approval.
+**Verification status (October 16, 2026):** genuine sandbox OAuth succeeded and exactly one `USD 59.00` order was created and retrieved with status `CREATED`. The returned order ID, custom ID, currency, and amount matched the backend proposal. Credentials and identifiers were redacted from reporting. No capture request was made, so the full buyer-approval and capture flow remains unverified. Opt-in `RUN_SANDBOX_SMOKE=true` runs only an OAuth test; checkout still requires human buyer approval.

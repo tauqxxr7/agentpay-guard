@@ -1,6 +1,6 @@
 # Blockers and owner actions
 
-1. **PayPal account access:** developer dashboard and sandbox business seller/personal buyer required. Enter sandbox client ID/secret locally in ignored `.env`, never chat. Keep PAYMENTS_ENABLED=false until ready to authorize testing.
+1. **PayPal buyer checkout/capture:** sandbox OAuth and one uncaptured order are verified. A separate personal sandbox buyer and explicit owner approval are still required before capture testing. Credentials remain only in ignored `.env`.
 2. **Hosted AI:** configure ANTHROPIC_API_KEY and an available ANTHROPIC_MODEL locally. Genuine inference and AI evaluation remain unverified.
 3. **Sandbox payment approval:** owner must explicitly authorize testing and approve in the PayPal buyer popup. No autonomous transaction will be performed.
 4. **Repository access:** GitHub returned Repository not found for the requested URL. Owner must confirm/create the repository and authorize public publishing. Local commits do not publish it.
