@@ -37,7 +37,7 @@ npm run dev
 
 Open http://localhost:3000. Without credentials, the fallback recommendation, policies, approval and audit work; checkout is disabled. Root `.env` is ignored. Configure secrets locally, never in chat, screenshots or commits.
 
-For hosted AI set `ANTHROPIC_API_KEY` and a model available to your account in `ANTHROPIC_MODEL`. For PayPal follow [sandbox setup](docs/PAYPAL_INTEGRATION.md). Only enable payments after owner authorization. PostgreSQL uses `DATABASE_URL=postgresql+psycopg://...`; SQLite is the local default.
+For hosted AI set `ANTHROPIC_API_KEY` and a model available to your account in `ANTHROPIC_MODEL`. The example uses the current fast model `claude-haiku-5-5`; your API workspace must have access to it. For PayPal follow [sandbox setup](docs/PAYPAL_INTEGRATION.md). Only enable payments after owner authorization. PostgreSQL uses `DATABASE_URL=postgresql+psycopg://...`; SQLite is the local default.
 
 ## Validation
 

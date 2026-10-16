@@ -2,6 +2,8 @@
 
 Frontend target: Vercel, project root `frontend`, build `npm run build`. Set server-only `BACKEND_URL` to the eventual HTTPS backend URL. Rewrites are built from that variable; rebuild when changing it. Do not put provider secrets in NEXT_PUBLIC variables.
 
+Vercel environment requirement: `BACKEND_URL` as a non-secret Config value scoped separately for Preview and Production. PayPal, AI, and database secrets belong only on the Render backend; they must never be configured in the frontend project.
+
 Backend target: Render Python web service, project root `backend`, build `pip install -r requirements.txt`, start `uvicorn app.main:app --host 0.0.0.0 --port $PORT`, health path `/health`.
 
 Use PostgreSQL via `DATABASE_URL=postgresql+psycopg://...`, set `FRONTEND_ORIGIN` to the exact HTTPS frontend origin, and configure secrets through platform secret settings. Use one worker initially. Keep PAYMENTS_ENABLED=false until account verification and test approval.

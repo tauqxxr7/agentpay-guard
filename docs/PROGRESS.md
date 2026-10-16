@@ -10,10 +10,11 @@
 - Sandbox-only OAuth/Orders adapter, stable idempotency keys, buyer approval verification and capture reconciliation.
 - Responsive catalog, workspace, approval, history and judge guide; actual desktop/mobile screenshots.
 - Unit/integration/security tests, 60 synthetic cases, browser tests, CI, deployment preparation, MIT license, setup and presentation drafts.
+- Upgraded Next.js and matching ESLint config from 16.3.5 to 16.4.2 after a critical production audit finding; post-upgrade audit reports zero known production vulnerabilities.
 
 ## Verified
 
-79 backend tests passed; one genuine OAuth test skipped. Six desktop/mobile browser tests passed, including explicitly mocked checkout initiation. Lint, strict TypeScript, production build and Python critical-error checks passed. See EVALUATION.md.
+79 backend tests passed; one credential-gated OAuth test skipped. Six desktop/mobile browser tests passed, including explicitly mocked checkout initiation. Ruff, lint, strict TypeScript, the Next.js 16.4.2 production build, and the production dependency audit passed. See EVALUATION.md.
 
 ## Not complete
 
