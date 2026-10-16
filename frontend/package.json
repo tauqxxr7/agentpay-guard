@@ -1,0 +1,6 @@
+{
+  "name": "agentpay-guard", "version": "0.1.0", "private": true,
+  "scripts": {"dev": "next dev", "build": "next build", "start": "next start", "typecheck": "next typegen && tsc --noEmit", "lint": "eslint .", "test:e2e": "playwright test"},
+  "dependencies": {"next": "16.3.5", "react": "19.2.8", "react-dom": "19.2.8"},
+  "devDependencies": {"typescript": "^5.9.0", "@types/node": "^24", "@types/react": "^19", "@types/react-dom": "^19", "@playwright/test": "^1.56", "eslint": "^9", "eslint-config-next": "16.3.5", "tailwindcss": "^4", "@tailwindcss/postcss": "^4"}
+}
