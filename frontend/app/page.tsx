@@ -6,9 +6,11 @@ import { Metric, PurchaseLifecycle } from './components/fintech-ui';
 type Product = { sku: string; name: string; category: string; cents: number; currency: string; merchant: string; attributes: string[] };
 type Proposal = { id: string; product: Product; quantity: number; total_cents: number; budget_cents: number; policy: Record<string, boolean>; reasoning: string; mode: string; state: string; order_id: string | null; audit: { event: string; at: string }[] };
 type Config = { payments_enabled: boolean; capture_enabled: boolean; client_id: string };
+type PayPalCallbackData = { orderID?: string; orderId?: string };
 type Buttons = { render: (element: HTMLElement) => Promise<void>; close: () => Promise<void> };
-declare global { interface Window { paypal?: { Buttons: (options: { createOrder: () => Promise<string>; onApprove: () => Promise<void>; onCancel: () => void; onError: () => void }) => Buttons } } }
+declare global { interface Window { paypal?: { Buttons: (options: { createOrder: () => Promise<string>; onApprove: (data: PayPalCallbackData) => Promise<void>; onCancel: (data: PayPalCallbackData) => void; onError: (error: unknown) => void }) => Buttons } } }
 const money = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n / 100);
+const redactOrder = (id?: string) => id && id.length > 8 ? `${id.slice(0, 4)}...${id.slice(-4)}` : 'unavailable';
 
 export default function Home() {
   const [tab, setTab] = useState('Workspace');
@@ -57,10 +59,10 @@ export default function Home() {
       if (disposed || !window.paypal) return;
       let orderCreationFailed = false;
       buttons = window.paypal.Buttons({
-        createOrder: async () => { try { return (await api(`/proposals/${id}/order`, {})).id; } catch (error) { orderCreationFailed = true; setNotice(error instanceof Error ? error.message : 'PayPal order creation failed before checkout.'); throw error; } },
-        onApprove: async () => { await perform(async () => { const p = await api(`/proposals/${id}/buyer-approval`, {}); setProposal(p); setNotice('PayPal buyer approval verified. Capture remains separately controlled.'); }); },
-        onCancel: () => setNotice('Checkout cancelled. No completed payment has been verified.'),
-        onError: () => { if (!orderCreationFailed) setNotice('PayPal buyer checkout failed. Check transaction status before trying again.'); }
+        createOrder: async () => { try { const order = await api(`/proposals/${id}/order`, {}); console.info('[AgentPay Guard] PayPal callback', { stage: 'createOrder', order: redactOrder(order.id) }); return order.id; } catch (error) { orderCreationFailed = true; console.info('[AgentPay Guard] PayPal callback', { stage: 'createOrder_error' }); setNotice(error instanceof Error ? error.message : 'PayPal order creation failed before checkout.'); throw error; } },
+        onApprove: async data => { console.info('[AgentPay Guard] PayPal callback', { stage: 'onApprove', order: redactOrder(data.orderID) }); await perform(async () => { const p = await api(`/proposals/${id}/buyer-approval`, {}); setProposal(p); setNotice('PayPal buyer approval verified. Capture remains separately controlled.'); }); },
+        onCancel: data => { console.info('[AgentPay Guard] PayPal callback', { stage: 'onCancel', order: redactOrder(data.orderID || data.orderId) }); setNotice('Checkout cancelled. No completed payment has been verified.'); },
+        onError: error => { console.info('[AgentPay Guard] PayPal callback', { stage: 'onError', error: error instanceof Error ? error.name : 'unknown' }); if (!orderCreationFailed) setNotice('PayPal buyer checkout failed. Check transaction status before trying again.'); }
       });
       void buttons.render(target).catch(() => setNotice('Could not display PayPal checkout.'));
     }

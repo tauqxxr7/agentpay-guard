@@ -248,7 +248,14 @@ def order(id: str, token=Depends(owner), s: Session = Depends(db)):
         },
         "create-" + p.id,
     )
+    units = result.get("purchase_units", [])
+    merchant_id = (
+        units[0].get("payee", {}).get("merchant_id") if len(units) == 1 else None
+    )
+    if not merchant_id:
+        raise HTTPException(502, "PayPal order did not identify the sandbox merchant")
     p.order_id = result["id"]
+    p.data = {**p.data, "paypal_merchant_id": merchant_id}
     p.state = "ORDER_CREATED"
     event(p, "ORDER_CREATED")
     s.commit()
@@ -261,11 +268,16 @@ def reconcile(p, result):
         raise HTTPException(502, "Unexpected PayPal purchase units")
     unit = units[0]
     amount = unit.get("amount", {})
+    merchant_id = unit.get("payee", {}).get("merchant_id")
     expected = {"currency_code": "USD", "value": f"{p.data['total_cents'] / 100:.2f}"}
     if (
         result.get("id") != p.order_id
         or unit.get("custom_id") != p.id
         or amount != expected
+        or (
+            p.data.get("paypal_merchant_id")
+            and merchant_id != p.data["paypal_merchant_id"]
+        )
     ):
         raise HTTPException(502, "PayPal order verification mismatch")
     status = result.get("status")

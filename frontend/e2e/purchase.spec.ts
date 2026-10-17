@@ -31,7 +31,7 @@ test('checkout buyer approval stays separate from capture with an explicitly moc
   let latestProposal: Record<string, unknown> | undefined;
   await page.route('**/api/config', route => route.fulfill({ json: { payments_enabled: true, capture_enabled: false, client_id: 'test-fixture' } }));
   await page.route('**/api/proposals', async route => { const response = await route.fetch(); latestProposal = await response.json(); await route.fulfill({ response, json: latestProposal }); });
-  await page.route('https://www.paypal.com/sdk/js?*', route => route.fulfill({ contentType: 'application/javascript', body: `window.paypal = { Buttons(options) { return { async render(target) { const b = document.createElement('button'); b.textContent = 'PayPal SDK fixture'; b.onclick = async () => { await options.createOrder(); await options.onApprove(); }; target.append(b); }, async close() {} }; } };` }));
+  await page.route('https://www.paypal.com/sdk/js?*', route => route.fulfill({ contentType: 'application/javascript', body: `window.paypal = { Buttons(options) { return { async render(target) { const b = document.createElement('button'); b.textContent = 'PayPal SDK fixture'; b.onclick = async () => { await options.createOrder(); await options.onApprove({ orderID: 'MOCK-ORDER' }); }; target.append(b); }, async close() {} }; } };` }));
   await page.route('**/api/proposals/*/order', route => { orders++; return route.fulfill({ json: { id: 'MOCK-ORDER' } }); });
   await page.route('**/api/proposals/*/buyer-approval', route => route.fulfill({ json: { ...latestProposal!, state: 'BUYER_APPROVED', order_id: 'MOCK-ORDER' } }));
   await page.route('**/api/proposals/*/capture', route => { captures++; return route.fulfill({ status: 500 }); });

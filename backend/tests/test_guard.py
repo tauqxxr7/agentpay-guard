@@ -77,7 +77,10 @@ def test_full_mocked_lifecycle_and_replay(client, monkeypatch):
         calls.append((method, path, body, request_id))
         if path == "/v2/checkout/orders":
             assert body["purchase_units"][0]["amount"]["value"] == "59.00"
-            return {"id": "TEST-ORDER"}
+            return {
+                "id": "TEST-ORDER",
+                "purchase_units": [{"payee": {"merchant_id": "TEST-MERCHANT"}}],
+            }
         captured = any(x[1].endswith("/capture") for x in calls)
         amount = {"currency_code": "USD", "value": "59.00"}
         return {
@@ -87,6 +90,7 @@ def test_full_mocked_lifecycle_and_replay(client, monkeypatch):
                 {
                     "custom_id": p["id"],
                     "amount": amount,
+                    "payee": {"merchant_id": "TEST-MERCHANT"},
                     "payments": {
                         "captures": [
                             {
@@ -115,6 +119,31 @@ def test_full_mocked_lifecycle_and_replay(client, monkeypatch):
         client.get("/transactions").json()[0]["audit"][-1]["event"]
         == "CAPTURE_VERIFIED"
     )
+
+
+def test_paypal_merchant_mismatch_is_rejected(client, monkeypatch):
+    p = proposal(client)
+    approve(client, p)
+    with main.Session(main.engine) as s:
+        row = s.get(main.Proposal, p["id"])
+        row.state = "ORDER_CREATED"
+        row.order_id = "TEST"
+        row.data = {**row.data, "paypal_merchant_id": "EXPECTED-MERCHANT"}
+        s.commit()
+    monkeypatch.setattr(
+        main.paypal,
+        "call",
+        lambda *args: {
+            "id": "TEST",
+            "status": "APPROVED",
+            "purchase_units": [{
+                "custom_id": p["id"],
+                "amount": {"currency_code": "USD", "value": "59.00"},
+                "payee": {"merchant_id": "WRONG-MERCHANT"},
+            }],
+        },
+    )
+    assert client.post("/proposals/" + p["id"] + "/buyer-approval").status_code == 502
 
 
 def test_tampering_and_approval_boundary(client):
