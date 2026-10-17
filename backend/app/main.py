@@ -129,6 +129,10 @@ class Approval(Strict):
     confirmed: Literal[True]
 
 
+class CaptureAuthorization(Strict):
+    confirmed: Literal[True]
+
+
 @app.get("/health")
 def health():
     return {"status": "ok", "environment": "sandbox"}
@@ -141,6 +145,7 @@ def config():
         and bool(os.getenv("PAYPAL_CLIENT_ID"))
         and bool(os.getenv("PAYPAL_CLIENT_SECRET")),
         "client_id": os.getenv("PAYPAL_CLIENT_ID", ""),
+        "capture_enabled": os.getenv("CAPTURE_ENABLED") == "true",
     }
 
 
@@ -263,9 +268,13 @@ def reconcile(p, result):
         or amount != expected
     ):
         raise HTTPException(502, "PayPal order verification mismatch")
+    status = result.get("status")
+    if status == "APPROVED" and p.state == "ORDER_CREATED":
+        p.state = "BUYER_APPROVED"
+        event(p, "PAYPAL_BUYER_APPROVED")
     captures = unit.get("payments", {}).get("captures", [])
     if (
-        result.get("status") == "COMPLETED"
+        status == "COMPLETED"
         and len(captures) == 1
         and captures[0].get("status") == "COMPLETED"
         and captures[0].get("amount") == expected
@@ -273,7 +282,19 @@ def reconcile(p, result):
         if p.state != "COMPLETED":
             p.state = "COMPLETED"
             event(p, "CAPTURE_VERIFIED")
-    return result.get("status")
+    return status
+
+
+@app.post("/proposals/{id}/buyer-approval")
+def buyer_approval(id: str, token=Depends(owner), s: Session = Depends(db)):
+    p = owned(s, id, token)
+    if p.state not in {"ORDER_CREATED", "BUYER_APPROVED"} or not p.order_id:
+        raise HTTPException(409, "No checkout order awaiting buyer approval")
+    state = reconcile(p, paypal.call("GET", "/v2/checkout/orders/" + p.order_id))
+    if state != "APPROVED" and p.state != "COMPLETED":
+        raise HTTPException(409, "PayPal buyer approval is not verified")
+    s.commit()
+    return view(p)
 
 
 @app.get("/proposals/{id}/status")
@@ -286,20 +307,27 @@ def status(id: str, token=Depends(owner), s: Session = Depends(db)):
 
 
 @app.post("/proposals/{id}/capture")
-def capture(id: str, token=Depends(owner), s: Session = Depends(db)):
+def capture(
+    id: str,
+    body: CaptureAuthorization,
+    token=Depends(owner),
+    s: Session = Depends(db),
+):
     limited(s, token)
+    if os.getenv("CAPTURE_ENABLED") != "true":
+        raise HTTPException(403, "Sandbox capture requires separate owner authorization")
     p = owned(s, id, token)
     if p.state == "COMPLETED":
         return view(p)
-    if p.state != "ORDER_CREATED" or not p.order_id:
-        raise HTTPException(409, "No approved checkout order")
+    if p.state not in {"ORDER_CREATED", "BUYER_APPROVED"} or not p.order_id:
+        raise HTTPException(409, "No buyer-approved checkout order")
     result = paypal.call("GET", "/v2/checkout/orders/" + p.order_id)
     state = reconcile(p, result)
     if p.state == "COMPLETED":
         s.commit()
         return view(p)
     validate(p)
-    if state != "APPROVED":
+    if state != "APPROVED" or p.state != "BUYER_APPROVED":
         raise HTTPException(409, "PayPal buyer approval required")
     paypal.call(
         "POST", "/v2/checkout/orders/" + p.order_id + "/capture", {}, "capture-" + p.id

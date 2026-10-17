@@ -6,11 +6,11 @@ export function StatusBadge({ children, tone = 'neutral' }: { children: ReactNod
 
 const stages = [
   ['AI', 'Recommendation'], ['POLICY', 'Validated'], ['HUMAN', 'Approval'],
-  ['ORDER', 'Created'], ['BUYER', 'PayPal approval'], ['CAPTURE', 'Verified'],
+  ['ORDER', 'Create order'], ['BUYER', 'PayPal approval'], ['CAPTURE', 'Verify capture'],
 ] as const;
 
 export function PurchaseLifecycle({ state }: { state?: string }) {
-  const complete = state === 'COMPLETED' ? 6 : state === 'ORDER_CREATED' ? 4 : state === 'APPROVED' ? 3 : state === 'PROPOSED' ? 2 : 0;
+  const complete = state === 'COMPLETED' ? 6 : state === 'BUYER_APPROVED' ? 5 : state === 'ORDER_CREATED' ? 4 : state === 'APPROVED' ? 3 : state === 'PROPOSED' ? 2 : 0;
   return <section className="lifecycle" aria-label="Purchase lifecycle">
     <div className="lifecycle-copy"><span>CONTROL SEQUENCE</span><strong>Every step is explicit</strong></div>
     <ol>{stages.map(([code, label], index) => <li key={code} className={index < complete ? 'done' : index === complete ? 'current' : ''}>

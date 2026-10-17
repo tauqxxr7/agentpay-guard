@@ -4,7 +4,7 @@
 
 | Check | Result | Scope |
 |---|---|---|
-| pytest | 79 passed, 1 skipped | Local SQLite, deterministic logic and mocked provider responses |
+| pytest | 90 passed, 1 skipped | Local SQLite, deterministic logic and mocked provider responses |
 | Synthetic evaluation | 60 / 60 passed | Ten request families × six budget boundaries; included in pytest total |
 | Playwright | 6 passed | Three flows on desktop Chrome and mobile-emulated Chrome |
 | ESLint | Passed | Frontend source |
@@ -15,7 +15,7 @@
 | Genuine sandbox OAuth | Passed | Real Sandbox API, October 16, 2026 |
 | Genuine sandbox order creation | Passed | Exactly one USD 59.00 order; retrieved as CREATED and fields matched |
 | Genuine sandbox checkout/capture | Not run | Human buyer authorization required; zero capture calls made |
-| Genuine hosted AI | Not run | Provider key/model absent |
+| Genuine hosted AI | Partial pass | One structured request succeeded; broader hosted suite hit provider availability/quota limits |
 | PostgreSQL | Not run | SQLite used locally |
 | Hosted deployment | Not run | Not authorized/published |
 
@@ -32,5 +32,7 @@ The genuine PayPal verification used the existing approval and order endpoints: 
 Initial failures: pytest reserved parameter name, Next link lint rule, Windows subprocess sandbox EPERM, and corrupted symbols identified visually. These were corrected; subprocess checks ran with approved escalation. No failed test result was substituted with a mock success claim.
 
 October 16 Phase 3 rerun: 79 backend tests passed and 1 credential-gated OAuth test skipped; Ruff check and format check passed; ESLint, TypeScript, Next.js 16.4.2 production build, and all 6 Playwright tests passed. An initial parallel browser/install run exhausted memory and timed out one navigation; the dependency install and suite were rerun sequentially and passed. The npm production audit initially found a critical vulnerability in Next.js 16.3.5; upgrading to 16.4.2 reduced the audit result to zero known production vulnerabilities.
+
+October 17 integration freeze: one genuine Gemini request using `gemini-flash-latest` resolved to `gemini-3.8-flash`, returned schema-valid grounded output, and completed in 24,434 ms. Reported usage was 540 prompt, 48 response, and 686 total tokens. Remaining hosted cases received 503/429 provider responses and were not counted as passes. The release regression passed 90 backend tests with 1 credential-gated test skipped, Ruff, ESLint, TypeScript, the Next.js production build, and all 6 Playwright desktop/mobile tests. PayPal order creation and capture were not called.
 
 Commands: `python -m pytest -q backend`; `python -m ruff format backend`; `python -m ruff check backend --select E9,F63,F7,F82`; frontend `npm run lint`, `npm run typecheck`, `npm run build`, `npm run test:e2e`.

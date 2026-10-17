@@ -11,7 +11,7 @@
 - [Orders v2](https://developer.paypal.com/api/orders/v2): create, retrieve and capture lifecycle. Stable PayPal-Request-Id values support retrying the same logical operation within PayPal's retention window.
 - [Sandbox accounts](https://developer.paypal.com/sandbox-testing/accounts): separate business seller and personal buyer test accounts. Developer dashboard access is required. Do not assume live domestic-payment rules or every funding method apply to sandbox; account/country eligibility must be tested.
 - [Webhooks](https://developer.paypal.com/api/rest/webhooks/rest/): supported with verification. Deferred here; server GET reconciliation is used instead. There is no webhook ingestion endpoint accepting unverified events.
-- [Claude Messages API](https://platform.claude.com/docs/en/api/messages/create): hosted adapter uses server-side HTTPS, validated JSON and no tools. A configured account/model and credits are required.
+- [Gemini structured output](https://ai.google.dev/gemini-api/docs/structured-output): the official Google Gen AI SDK accepts Pydantic response schemas. The hosted adapter uses server-side credentials, no tools, bounded retries, Pydantic validation and deterministic post-validation. A configured API key, available model and quota are required.
 
 ## Repository verification
 

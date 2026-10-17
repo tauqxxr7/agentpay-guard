@@ -4,12 +4,12 @@ AI-powered purchasing with verifiable decisions, policy-controlled spending, and
 
 An assistant can suggest a purchase; it should not silently spend your money. AgentPay Guard turns a request into a catalog-grounded proposal, checks deterministic policies, records your approval, and initiates PayPal sandbox checkout.
 
-**Status:** local implementation; genuine AI and PayPal verification pending owner configuration. No public demo or video yet. Fictional inventory, no fulfillment, sandbox only.
+**Status:** local implementation; one genuine Gemini request and PayPal Sandbox OAuth/order creation are verified. Buyer checkout, capture, PostgreSQL, deployment, and public publishing remain pending. Fictional inventory, no fulfillment, sandbox only.
 
 ## Features
 
 - Natural-language requests, explicit USD budget, quantity, catalog comparison.
-- Hosted Claude adapter with validated JSON; clearly labelled deterministic non-AI fallback.
+- Hosted Gemini adapter with native Pydantic structured output; clearly labelled deterministic non-AI fallback.
 - Server checks SKU, merchant, category, availability, budget and price changes.
 - Explicit approval before official PayPal checkout; server-verified capture status.
 - Isolated session history and timestamped decision audit.
@@ -37,7 +37,7 @@ npm run dev
 
 Open http://localhost:3000. Without credentials, the fallback recommendation, policies, approval and audit work; checkout is disabled. Root `.env` is ignored. Configure secrets locally, never in chat, screenshots or commits.
 
-For hosted AI set `ANTHROPIC_API_KEY` and a model available to your account in `ANTHROPIC_MODEL`. The example uses the current fast model `claude-haiku-5-5`; your API workspace must have access to it. For PayPal follow [sandbox setup](docs/PAYPAL_INTEGRATION.md). Only enable payments after owner authorization. PostgreSQL uses `DATABASE_URL=postgresql+psycopg://...`; SQLite is the local default.
+For hosted AI set `AI_PROVIDER=gemini`, `GEMINI_API_KEY`, and `GEMINI_MODEL=gemini-flash-latest` in ignored `.env`. The API resolves the alias to an actual model version during explicit evaluation. For PayPal follow [sandbox setup](docs/PAYPAL_INTEGRATION.md). `PAYMENTS_ENABLED` permits sandbox order creation; the separate server-only `CAPTURE_ENABLED` gate must also be explicitly enabled before capture. PostgreSQL uses `DATABASE_URL=postgresql+psycopg://...`; SQLite is the local default.
 
 ## Validation
 
@@ -74,7 +74,7 @@ flowchart LR
   Verify --> DB
 ```
 
-Stack: Next.js, React, TypeScript, Tailwind, FastAPI, Pydantic, SQLAlchemy, PostgreSQL/SQLite, pytest, Playwright, PayPal Orders/JavaScript SDK and Claude Messages API.
+Stack: Next.js, React, TypeScript, Tailwind, FastAPI, Pydantic, SQLAlchemy, PostgreSQL/SQLite, pytest, Playwright, PayPal Orders/JavaScript SDK and the Google Gen AI SDK.
 
 The model cannot call payment tools. Client callbacks cannot mark a payment complete. No live PayPal endpoint is configurable. This is a hackathon build, not production-certified financial infrastructure.
 

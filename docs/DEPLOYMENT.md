@@ -6,7 +6,7 @@ Vercel environment requirement: `BACKEND_URL` as a non-secret Config value scope
 
 Backend target: Render Python web service, project root `backend`, build `pip install -r requirements.txt`, start `uvicorn app.main:app --host 0.0.0.0 --port $PORT`, health path `/health`.
 
-Use PostgreSQL via `DATABASE_URL=postgresql+psycopg://...`, set `FRONTEND_ORIGIN` to the exact HTTPS frontend origin, and configure secrets through platform secret settings. Use one worker initially. Keep PAYMENTS_ENABLED=false until account verification and test approval.
+Use PostgreSQL via `DATABASE_URL=postgresql+psycopg://...`, set `FRONTEND_ORIGIN` to the exact HTTPS frontend origin, and configure secrets through platform secret settings. Use one worker initially. Keep `PAYMENTS_ENABLED=false` and `CAPTURE_ENABLED=false` until the corresponding sandbox tests are explicitly authorized. Schema creation currently uses SQLAlchemy `create_all`; migration tooling must be added before multi-version production rollout.
 
 Before public publishing: add IP/edge session issuance limits, test PostgreSQL, configure budget limits for hosted AI, verify HTTPS/proxy/CORS and session isolation, and obtain owner approval. No platform resources were created or modified.
 

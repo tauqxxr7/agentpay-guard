@@ -4,13 +4,13 @@ All API requests are hardcoded to `https://api-m.sandbox.paypal.com`. There is n
 
 1. Owner creates/selects a sandbox REST app in the PayPal developer dashboard, with a business sandbox seller and a separate personal sandbox buyer.
 2. Put client ID and secret into ignored root `.env` using a local editor. Never paste secrets into chat. Client ID is public SDK configuration; the secret remains server-only.
-3. Set `PAYMENTS_ENABLED=true` only when ready to authorize sandbox testing; restart backend.
+3. Set `PAYMENTS_ENABLED=true` only when ready to authorize sandbox order and buyer-checkout testing; restart backend. Leave `CAPTURE_ENABLED=false`.
 4. Create a proposal and approve its displayed amount. The official PayPal button calls `/proposals/{id}/order`.
 5. Server exchanges OAuth credentials, creates the order from its own validated amount and sends a stable request ID.
-6. Buyer approves in the PayPal popup. Browser calls `/capture` with the proposal ID, not a trusted amount/status.
-7. Server retrieves the order, checks ownership, amount, USD, custom ID and APPROVED status; captures with a stable request ID; retrieves again and verifies the capture before recording completion.
+6. Buyer approves in the PayPal popup. The browser calls `/buyer-approval`; the server retrieves the order and checks ownership, amount, USD, custom ID, and `APPROVED` status before recording `BUYER_APPROVED`. No capture occurs in this callback.
+7. Only after separate owner authorization, set the server-only `CAPTURE_ENABLED=true`. The authenticated user must then submit explicit capture confirmation. The server re-verifies the order, captures with a stable request ID, retrieves it again, and records completion only after verifying the completed capture.
 
-API: `GET /catalog`, `POST /sessions`, `POST /proposals`, `GET /transactions`, `POST /proposals/{id}/approve`, `POST /proposals/{id}/order`, `POST /proposals/{id}/capture`, `GET /proposals/{id}/status`. FastAPI provides `/docs` and `/openapi.json`.
+API: `GET /catalog`, `POST /sessions`, `POST /proposals`, `GET /transactions`, `POST /proposals/{id}/approve`, `POST /proposals/{id}/order`, `POST /proposals/{id}/buyer-approval`, `POST /proposals/{id}/capture`, `GET /proposals/{id}/status`. FastAPI provides `/docs` and `/openapi.json`.
 
 Generic API failures do not reveal provider payloads. Cancellation is displayed in the browser; there is no claim of a completed payment. Pending captures remain uncompleted locally until a later authenticated status refresh confirms them. No refund or shipment features.
 

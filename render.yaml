@@ -13,11 +13,15 @@ services:
         sync: false
       - key: PAYMENTS_ENABLED
         value: 'false'
+      - key: CAPTURE_ENABLED
+        value: 'false'
       - key: PAYPAL_CLIENT_ID
         sync: false
       - key: PAYPAL_CLIENT_SECRET
         sync: false
-      - key: ANTHROPIC_API_KEY
+      - key: AI_PROVIDER
+        value: gemini
+      - key: GEMINI_API_KEY
         sync: false
-      - key: ANTHROPIC_MODEL
-        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-flash-latest

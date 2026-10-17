@@ -25,11 +25,16 @@ test('budget rejection and catalog comparison', async ({ page }) => {
   await expect(page.getByText('$35.00', { exact: true })).toBeVisible();
 });
 
-test('checkout initiation and cancellation with an explicitly mocked SDK', async ({ page }) => {
+test('checkout buyer approval stays separate from capture with an explicitly mocked SDK', async ({ page }) => {
   let orders = 0;
-  await page.route('**/api/config', route => route.fulfill({ json: { payments_enabled: true, client_id: 'test-fixture' } }));
-  await page.route('https://www.paypal.com/sdk/js?*', route => route.fulfill({ contentType: 'application/javascript', body: `window.paypal = { Buttons(options) { return { async render(target) { const b = document.createElement('button'); b.textContent = 'PayPal SDK fixture'; b.onclick = async () => { await options.createOrder(); options.onCancel(); }; target.append(b); }, async close() {} }; } };` }));
+  let captures = 0;
+  let latestProposal: Record<string, unknown> | undefined;
+  await page.route('**/api/config', route => route.fulfill({ json: { payments_enabled: true, capture_enabled: false, client_id: 'test-fixture' } }));
+  await page.route('**/api/proposals', async route => { const response = await route.fetch(); latestProposal = await response.json(); await route.fulfill({ response, json: latestProposal }); });
+  await page.route('https://www.paypal.com/sdk/js?*', route => route.fulfill({ contentType: 'application/javascript', body: `window.paypal = { Buttons(options) { return { async render(target) { const b = document.createElement('button'); b.textContent = 'PayPal SDK fixture'; b.onclick = async () => { await options.createOrder(); await options.onApprove(); }; target.append(b); }, async close() {} }; } };` }));
   await page.route('**/api/proposals/*/order', route => { orders++; return route.fulfill({ json: { id: 'MOCK-ORDER' } }); });
+  await page.route('**/api/proposals/*/buyer-approval', route => route.fulfill({ json: { ...latestProposal!, state: 'BUYER_APPROVED', order_id: 'MOCK-ORDER' } }));
+  await page.route('**/api/proposals/*/capture', route => { captures++; return route.fulfill({ status: 500 }); });
   await page.goto('/');
   await page.getByRole('button', { name: 'Find my best fit' }).click();
   await expect(page.getByRole('button', { name: 'Approve $59.00 USD' })).toBeVisible();
@@ -38,5 +43,7 @@ test('checkout initiation and cancellation with an explicitly mocked SDK', async
   await page.getByRole('button', { name: 'Approve $59.00 USD' }).click();
   await page.getByRole('button', { name: 'PayPal SDK fixture' }).click();
   expect(orders).toBe(1);
-  await expect(page.getByRole('status')).toContainText('Checkout cancelled');
+  expect(captures).toBe(0);
+  await expect(page.getByText('PayPal buyer approval verified. No capture has occurred.')).toBeVisible();
+  await expect(page.getByText('Capture is locked until the owner separately enables and authorizes it.')).toBeVisible();
 });

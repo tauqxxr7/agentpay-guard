@@ -14,7 +14,7 @@ AgentPay Guard interprets a purchasing request, recommends from a controlled dem
 
 ## How it is built
 
-Next.js, TypeScript and Tailwind provide the responsive interface. FastAPI, Pydantic and SQLAlchemy own validation, sessions and persistence. A hosted Claude adapter returns a constrained SKU selection; deterministic server code checks budget, merchant, category, availability and price. PayPal Orders API and the official JavaScript checkout handle buyer approval. The backend verifies capture status independently.
+Next.js, TypeScript and Tailwind provide the responsive interface. FastAPI, Pydantic and SQLAlchemy own validation, sessions and persistence. A hosted Gemini adapter uses native Pydantic structured output for a constrained SKU selection; deterministic server code checks budget, merchant, category, availability and price. PayPal Orders API and the official JavaScript checkout handle buyer approval. The backend verifies capture status independently.
 
 ## What makes it different
 

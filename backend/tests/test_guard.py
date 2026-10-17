@@ -15,7 +15,8 @@ def client(monkeypatch):
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
     monkeypatch.setattr(main, "engine", engine)
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("AI_PROVIDER", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.setenv("PAYMENTS_ENABLED", "false")
     with TestClient(main.app) as c:
         c.headers["Authorization"] = "Bearer " + c.post("/sessions").json()["token"]
@@ -53,7 +54,8 @@ def approve(client, p):
     ],
 )
 def test_synthetic_fallback_scenarios(monkeypatch, prompt, minimum, budget):
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("AI_PROVIDER", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     result, mode = recommend(prompt, budget, 1)
     assert "non-AI" in mode
     if minimum is not None and budget >= minimum:
@@ -66,6 +68,7 @@ def test_synthetic_fallback_scenarios(monkeypatch, prompt, minimum, budget):
 
 
 def test_full_mocked_lifecycle_and_replay(client, monkeypatch):
+    monkeypatch.setenv("CAPTURE_ENABLED", "true")
     p = proposal(client)
     assert approve(client, p).status_code == 200
     calls = []
@@ -103,8 +106,9 @@ def test_full_mocked_lifecycle_and_replay(client, monkeypatch):
     path = "/proposals/" + p["id"]
     assert client.post(path + "/order").json() == {"id": "TEST-ORDER"}
     assert client.post(path + "/order").json() == {"id": "TEST-ORDER"}
-    assert client.post(path + "/capture").json()["state"] == "COMPLETED"
-    assert client.post(path + "/capture").json()["state"] == "COMPLETED"
+    assert client.post(path + "/buyer-approval").json()["state"] == "BUYER_APPROVED"
+    assert client.post(path + "/capture", json={"confirmed": True}).json()["state"] == "COMPLETED"
+    assert client.post(path + "/capture", json={"confirmed": True}).json()["state"] == "COMPLETED"
     assert len([x for x in calls if x[1].endswith("/capture")]) == 1
     assert len([x for x in calls if x[1] == "/v2/checkout/orders"]) == 1
     assert (
@@ -116,7 +120,7 @@ def test_full_mocked_lifecycle_and_replay(client, monkeypatch):
 def test_tampering_and_approval_boundary(client):
     p = proposal(client)
     path = "/proposals/" + p["id"]
-    assert client.post(path + "/capture").status_code == 409
+    assert client.post(path + "/capture", json={"confirmed": True}).status_code == 403
     assert client.post(path + "/order").status_code == 409
     assert (
         client.post(
@@ -194,6 +198,7 @@ def test_forged_status_rejected(client):
 
 
 def test_unapproved_paypal_order(client, monkeypatch):
+    monkeypatch.setenv("CAPTURE_ENABLED", "true")
     p = proposal(client)
     approve(client, p)
     with main.Session(main.engine) as s:
@@ -215,7 +220,23 @@ def test_unapproved_paypal_order(client, monkeypatch):
             ],
         },
     )
-    assert client.post("/proposals/" + p["id"] + "/capture").status_code == 409
+    assert client.post("/proposals/" + p["id"] + "/capture", json={"confirmed": True}).status_code == 409
+
+
+def test_capture_requires_server_side_owner_gate(client, monkeypatch):
+    p = proposal(client)
+    approve(client, p)
+    with main.Session(main.engine) as s:
+        row = s.get(main.Proposal, p["id"])
+        row.state = "BUYER_APPROVED"
+        row.order_id = "TEST"
+        s.commit()
+    monkeypatch.setenv("CAPTURE_ENABLED", "false")
+    response = client.post(
+        "/proposals/" + p["id"] + "/capture", json={"confirmed": True}
+    )
+    assert response.status_code == 403
+    assert "separate owner authorization" in response.json()["detail"]
 
 
 def test_rate_limit(client):
