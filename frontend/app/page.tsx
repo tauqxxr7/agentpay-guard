@@ -11,6 +11,7 @@ type Buttons = { render: (element: HTMLElement) => Promise<void>; close: () => P
 declare global { interface Window { paypal?: { Buttons: (options: { createOrder: () => Promise<string>; onApprove: (data: PayPalCallbackData) => Promise<void>; onCancel: (data: PayPalCallbackData) => void; onError: (error: unknown) => void }) => Buttons } } }
 const money = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n / 100);
 const redactOrder = (id?: string) => id && id.length > 8 ? `${id.slice(0, 4)}...${id.slice(-4)}` : 'unavailable';
+const checkoutLog = (stage: string, detail: Record<string, string> = {}) => console.info('[AgentPay Guard] PayPal diagnostic', { stage, ...detail });
 
 export default function Home() {
   const [tab, setTab] = useState('Workspace');
@@ -45,6 +46,20 @@ export default function Home() {
     }
     void initialize(); return () => { active = false; };
   }, []);
+  useEffect(() => {
+    const rejected = (event: PromiseRejectionEvent) => checkoutLog('browser_unhandled_rejection', { type: event.reason instanceof Error ? event.reason.name : 'unknown' });
+    const failed = (event: ErrorEvent) => checkoutLog('browser_error', { type: event.error instanceof Error ? event.error.name : 'unknown' });
+    const blocked = (event: SecurityPolicyViolationEvent) => checkoutLog('csp_violation', { directive: event.effectiveDirective || 'unknown' });
+    window.addEventListener('unhandledrejection', rejected);
+    window.addEventListener('error', failed);
+    document.addEventListener('securitypolicyviolation', blocked);
+    checkoutLog('diagnostics_ready');
+    return () => {
+      window.removeEventListener('unhandledrejection', rejected);
+      window.removeEventListener('error', failed);
+      document.removeEventListener('securitypolicyviolation', blocked);
+    };
+  }, []);
   const perform = useCallback(async (action: () => Promise<void>) => {
     setBusy(true); setNotice('');
     try { await action(); } catch (e) { setNotice(e instanceof Error ? e.message : 'Request failed. Please retry.'); } finally { setBusy(false); }
@@ -59,10 +74,10 @@ export default function Home() {
       if (disposed || !window.paypal) return;
       let orderCreationFailed = false;
       buttons = window.paypal.Buttons({
-        createOrder: async () => { try { const order = await api(`/proposals/${id}/order`, {}); console.info('[AgentPay Guard] PayPal callback', { stage: 'createOrder', order: redactOrder(order.id) }); return order.id; } catch (error) { orderCreationFailed = true; console.info('[AgentPay Guard] PayPal callback', { stage: 'createOrder_error' }); setNotice(error instanceof Error ? error.message : 'PayPal order creation failed before checkout.'); throw error; } },
-        onApprove: async data => { console.info('[AgentPay Guard] PayPal callback', { stage: 'onApprove', order: redactOrder(data.orderID) }); await perform(async () => { const p = await api(`/proposals/${id}/buyer-approval`, {}); setProposal(p); setNotice('PayPal buyer approval verified. Capture remains separately controlled.'); }); },
-        onCancel: data => { console.info('[AgentPay Guard] PayPal callback', { stage: 'onCancel', order: redactOrder(data.orderID || data.orderId) }); setNotice('Checkout cancelled. No completed payment has been verified.'); },
-        onError: error => { console.info('[AgentPay Guard] PayPal callback', { stage: 'onError', error: error instanceof Error ? error.name : 'unknown' }); if (!orderCreationFailed) setNotice('PayPal buyer checkout failed. Check transaction status before trying again.'); }
+        createOrder: async () => { try { const order = await api(`/proposals/${id}/order`, {}); checkoutLog('createOrder', { order: redactOrder(order.id) }); return order.id; } catch (error) { orderCreationFailed = true; checkoutLog('createOrder_error'); setNotice(error instanceof Error ? error.message : 'PayPal order creation failed before checkout.'); throw error; } },
+        onApprove: async data => { checkoutLog('onApprove', { order: redactOrder(data.orderID) }); await perform(async () => { const p = await api(`/proposals/${id}/buyer-approval`, {}); setProposal(p); checkoutLog('buyer_approval_verified', { order: redactOrder(data.orderID) }); setNotice('PayPal buyer approval verified. Capture remains separately controlled.'); }); },
+        onCancel: data => { checkoutLog('onCancel', { order: redactOrder(data.orderID || data.orderId) }); setNotice('Checkout cancelled. No completed payment has been verified.'); },
+        onError: error => { checkoutLog('onError', { type: error instanceof Error ? error.name : 'unknown' }); if (!orderCreationFailed) setNotice('PayPal buyer checkout failed. Check transaction status before trying again.'); }
       });
       void buttons.render(target).catch(() => setNotice('Could not display PayPal checkout.'));
     }
@@ -70,7 +85,7 @@ export default function Home() {
     if (window.paypal) render(); else {
       script = document.createElement('script');
       script.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(config.client_id)}&currency=USD&intent=capture&components=buttons`;
-      script.onload = render; script.onerror = () => setNotice('Could not load the PayPal SDK.'); document.body.appendChild(script);
+      script.onload = () => { checkoutLog('sdk_loaded'); render(); }; script.onerror = () => { checkoutLog('sdk_load_error'); setNotice('Could not load the PayPal SDK.'); }; document.body.appendChild(script);
     }
     return () => { disposed = true; void buttons?.close(); script?.remove(); };
   }, [proposal, config, api, perform, tab]);
