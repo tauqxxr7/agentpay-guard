@@ -95,7 +95,14 @@ def event(p, name):
 
 
 def view(p):
-    return dict(id=p.id, **p.data, state=p.state, order_id=p.order_id, audit=p.audit)
+    return dict(
+        id=p.id,
+        **p.data,
+        state=p.state,
+        order_id=p.order_id,
+        created_at=datetime.fromtimestamp(p.created, timezone.utc).isoformat(),
+        audit=p.audit,
+    )
 
 
 def validate(p):
@@ -270,10 +277,11 @@ def reconcile(p, result):
     amount = unit.get("amount", {})
     merchant_id = unit.get("payee", {}).get("merchant_id")
     expected = {"currency_code": "USD", "value": f"{p.data['total_cents'] / 100:.2f}"}
+    amount_matches = all(amount.get(key) == value for key, value in expected.items())
     if (
         result.get("id") != p.order_id
         or unit.get("custom_id") != p.id
-        or amount != expected
+        or not amount_matches
         or (
             p.data.get("paypal_merchant_id")
             and merchant_id != p.data["paypal_merchant_id"]
@@ -289,12 +297,50 @@ def reconcile(p, result):
         status == "COMPLETED"
         and len(captures) == 1
         and captures[0].get("status") == "COMPLETED"
-        and captures[0].get("amount") == expected
+        and all(
+            captures[0].get("amount", {}).get(key) == value
+            for key, value in expected.items()
+        )
     ):
         if p.state != "COMPLETED":
             p.state = "COMPLETED"
             event(p, "CAPTURE_VERIFIED")
     return status
+
+
+@app.post("/proposals/{id}/resume")
+def resume(id: str, token=Depends(owner), s: Session = Depends(db)):
+    """Verify and return an existing Sandbox order; never create a replacement."""
+    limited(s, token)
+    p = owned(s, id, token)
+    if p.state != "ORDER_CREATED" or not p.order_id:
+        raise HTTPException(409, "No created PayPal order is eligible for checkout resume")
+    expected_merchant = os.getenv("PAYPAL_MERCHANT_ID", "")
+    if not expected_merchant:
+        raise HTTPException(503, "Sandbox merchant identity is not configured for recovery")
+    result = paypal.call("GET", "/v2/checkout/orders/" + p.order_id)
+    units = result.get("purchase_units", [])
+    merchant_id = (
+        units[0].get("payee", {}).get("merchant_id") if len(units) == 1 else None
+    )
+    if merchant_id != expected_merchant:
+        raise HTTPException(502, "PayPal order verification mismatch")
+    status = reconcile(p, result)
+    if status == "CREATED":
+        return {"id": p.order_id, "status": status, "proposal": view(p)}
+    if status == "APPROVED":
+        s.commit()
+        return {"id": p.order_id, "status": status, "proposal": view(p)}
+    if status in {"VOIDED", "COMPLETED"}:
+        if status == "VOIDED":
+            p.state = "EXPIRED"
+            event(p, "PAYPAL_ORDER_EXPIRED")
+        s.commit()
+        raise HTTPException(409, f"PayPal order is no longer resumable ({status})")
+    p.state = "FAILED"
+    event(p, "PAYPAL_ORDER_RESUME_FAILED")
+    s.commit()
+    raise HTTPException(409, f"PayPal order is not resumable ({status or 'UNKNOWN'})")
 
 
 @app.post("/proposals/{id}/buyer-approval")

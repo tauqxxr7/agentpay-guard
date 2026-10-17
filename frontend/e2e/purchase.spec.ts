@@ -58,3 +58,26 @@ test('order transport failure is identified before buyer checkout', async ({ pag
   await page.getByRole('button', { name: 'PayPal SDK fixture' }).click();
   await expect(page.getByRole('status')).toContainText('PayPal sandbox could not be reached');
 });
+
+test('owned persisted order is explicitly resumed without creating a replacement', async ({ page }) => {
+  const existing = {
+    id: 'PROPOSAL-1', product: { sku: 'KEY-01', name: 'Studio Keyboard', category: 'keyboard', cents: 5900, currency: 'USD', merchant: 'Guard Demo Store', attributes: ['Quiet'] },
+    quantity: 1, total_cents: 5900, budget_cents: 8000, policy: { within_budget: true, approved_merchant: true }, reasoning: 'Verified.', mode: 'hosted AI', state: 'ORDER_CREATED', order_id: '3S88-EXISTING-000W', created_at: '2026-10-17T08:00:00Z', audit: []
+  };
+  let resumes = 0;
+  let creates = 0;
+  await page.route('**/api/config', route => route.fulfill({ json: { payments_enabled: true, capture_enabled: false, client_id: 'test-fixture' } }));
+  await page.route('**/api/transactions', route => route.fulfill({ json: [existing] }));
+  await page.route('**/api/proposals/PROPOSAL-1/resume', route => { resumes++; return route.fulfill({ json: { id: existing.order_id, status: 'CREATED', proposal: existing } }); });
+  await page.route('**/api/proposals/PROPOSAL-1/order', route => { creates++; return route.fulfill({ status: 500 }); });
+  await page.route('https://www.paypal.com/sdk/js?*', route => route.fulfill({ contentType: 'application/javascript', body: `window.paypal = { Buttons(options) { return { async render(target) { const b = document.createElement('button'); b.textContent = 'Resume existing PayPal order'; b.onclick = () => options.createOrder(); target.append(b); }, async close() {} }; } };` }));
+  await page.goto('/');
+  await page.getByRole('button', { name: 'History', exact: true }).click();
+  await expect(page.getByText('3S88-EXISTING-000W')).toBeVisible();
+  await page.getByRole('button', { name: 'Resume Checkout' }).click();
+  await expect(page.getByText('Resuming existing Sandbox order')).toBeVisible();
+  await expect(page.getByText('3S88-EXISTING-000W', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Resume existing PayPal order' }).click();
+  await expect.poll(() => resumes).toBe(2);
+  expect(creates).toBe(0);
+});

@@ -202,6 +202,110 @@ def test_expiry(client):
     assert approve(client, p).status_code == 409
 
 
+def _existing_order(client, p, *, expired=True):
+    approve(client, p)
+    with main.Session(main.engine) as s:
+        row = s.get(main.Proposal, p["id"])
+        row.state = "ORDER_CREATED"
+        row.order_id = "TEST-ORDER"
+        row.data = {**row.data, "paypal_merchant_id": "TEST-MERCHANT"}
+        if expired:
+            row.created = time.time() - 1801
+        s.commit()
+
+
+def _paypal_order(p, **changes):
+    result = {
+        "id": "TEST-ORDER",
+        "status": "CREATED",
+        "purchase_units": [{
+            "custom_id": p["id"],
+            "amount": {"currency_code": "USD", "value": "59.00"},
+            "payee": {"merchant_id": "TEST-MERCHANT"},
+        }],
+    }
+    result.update(changes)
+    return result
+
+
+def test_expired_existing_order_can_resume_without_creation(client, monkeypatch):
+    p = proposal(client)
+    _existing_order(client, p)
+    monkeypatch.setenv("PAYPAL_MERCHANT_ID", "TEST-MERCHANT")
+    calls = []
+
+    def fake(method, path, body=None, request_id=None):
+        calls.append((method, path))
+        result = _paypal_order(p)
+        result["purchase_units"][0]["amount"]["breakdown"] = {
+            "item_total": {"currency_code": "USD", "value": "59.00"}
+        }
+        return result
+
+    monkeypatch.setattr(main.paypal, "call", fake)
+    path = "/proposals/" + p["id"] + "/resume"
+    first = client.post(path)
+    second = client.post(path)
+    assert first.status_code == second.status_code == 200
+    assert first.json()["id"] == second.json()["id"] == "TEST-ORDER"
+    assert all(method == "GET" for method, _ in calls)
+    assert len(calls) == 2
+
+
+def test_different_session_cannot_resume_order(client, monkeypatch):
+    p = proposal(client)
+    _existing_order(client, p)
+    monkeypatch.setenv("PAYPAL_MERCHANT_ID", "TEST-MERCHANT")
+    client.headers["Authorization"] = (
+        "Bearer " + client.post("/sessions").json()["token"]
+    )
+    assert client.post("/proposals/" + p["id"] + "/resume").status_code == 404
+
+
+@pytest.mark.parametrize("mismatch", ["id", "amount", "currency", "merchant"])
+def test_resume_rejects_paypal_identity_mismatch(client, monkeypatch, mismatch):
+    p = proposal(client)
+    _existing_order(client, p)
+    monkeypatch.setenv("PAYPAL_MERCHANT_ID", "TEST-MERCHANT")
+    result = _paypal_order(p)
+    if mismatch == "id":
+        result["id"] = "OTHER"
+    elif mismatch == "amount":
+        result["purchase_units"][0]["amount"]["value"] = "1.00"
+    elif mismatch == "currency":
+        result["purchase_units"][0]["amount"]["currency_code"] = "EUR"
+    else:
+        result["purchase_units"][0]["payee"]["merchant_id"] = "OTHER"
+    monkeypatch.setattr(main.paypal, "call", lambda *args: result)
+    assert client.post("/proposals/" + p["id"] + "/resume").status_code == 502
+
+
+def test_resume_rejects_unusable_paypal_order(client, monkeypatch):
+    p = proposal(client)
+    _existing_order(client, p)
+    monkeypatch.setenv("PAYPAL_MERCHANT_ID", "TEST-MERCHANT")
+    monkeypatch.setattr(
+        main.paypal, "call", lambda *args: _paypal_order(p, status="VOIDED")
+    )
+    response = client.post("/proposals/" + p["id"] + "/resume")
+    assert response.status_code == 409
+    assert "no longer resumable" in response.json()["detail"]
+    assert client.get("/transactions").json()[0]["state"] == "EXPIRED"
+
+
+def test_expired_proposal_without_order_cannot_create_one(client, monkeypatch):
+    p = proposal(client)
+    approve(client, p)
+    with main.Session(main.engine) as s:
+        row = s.get(main.Proposal, p["id"])
+        row.created = time.time() - 1801
+        s.commit()
+    calls = []
+    monkeypatch.setattr(main.paypal, "call", lambda *args: calls.append(args))
+    assert client.post("/proposals/" + p["id"] + "/order").status_code == 409
+    assert calls == []
+
+
 @pytest.mark.parametrize(
     "field,value", [("merchant", "Unapproved"), ("category", "weapons"), ("stock", 0)]
 )
