@@ -55,11 +55,12 @@ export default function Home() {
     const id = proposal.id;
     function render() {
       if (disposed || !window.paypal) return;
+      let orderCreationFailed = false;
       buttons = window.paypal.Buttons({
-        createOrder: async () => (await api(`/proposals/${id}/order`, {})).id,
+        createOrder: async () => { try { return (await api(`/proposals/${id}/order`, {})).id; } catch (error) { orderCreationFailed = true; setNotice(error instanceof Error ? error.message : 'PayPal order creation failed before checkout.'); throw error; } },
         onApprove: async () => { await perform(async () => { const p = await api(`/proposals/${id}/buyer-approval`, {}); setProposal(p); setNotice('PayPal buyer approval verified. Capture remains separately controlled.'); }); },
         onCancel: () => setNotice('Checkout cancelled. No completed payment has been verified.'),
-        onError: () => setNotice('PayPal checkout failed. Check transaction status before trying again.')
+        onError: () => { if (!orderCreationFailed) setNotice('PayPal buyer checkout failed. Check transaction status before trying again.'); }
       });
       void buttons.render(target).catch(() => setNotice('Could not display PayPal checkout.'));
     }

@@ -1,9 +1,11 @@
 import os
 import time
+import logging
 import httpx
 from fastapi import HTTPException
 
 BASE = "https://api-m.sandbox.paypal.com"
+logger = logging.getLogger(__name__)
 
 
 class PayPal:
@@ -43,10 +45,38 @@ class PayPal:
                 r = client.request(method, BASE + path, headers=headers, json=body)
                 r.raise_for_status()
                 return r.json()
-        except (httpx.HTTPError, KeyError, ValueError):
+        except httpx.HTTPStatusError as exc:
+            response = exc.response
+            try:
+                error = response.json()
+            except ValueError:
+                error = {}
+            logger.warning(
+                "PayPal sandbox HTTP failure path=%s status=%s name=%s debug_id=%s",
+                path,
+                response.status_code,
+                error.get("name", "unknown"),
+                error.get("debug_id", "unavailable"),
+            )
             raise HTTPException(
                 502,
-                "PayPal sandbox request failed or timed out. Retry with the same proposal; never assume payment succeeded.",
+                "PayPal sandbox rejected the request. No success was assumed.",
+            ) from None
+        except httpx.RequestError as exc:
+            logger.warning(
+                "PayPal sandbox connection failure path=%s type=%s",
+                path,
+                type(exc).__name__,
+            )
+            raise HTTPException(
+                502,
+                "PayPal sandbox could not be reached. No success was assumed.",
+            ) from None
+        except (KeyError, ValueError):
+            logger.warning("PayPal sandbox returned an invalid response path=%s", path)
+            raise HTTPException(
+                502,
+                "PayPal sandbox returned an invalid response. No success was assumed.",
             ) from None
 
 

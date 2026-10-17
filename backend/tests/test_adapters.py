@@ -221,3 +221,24 @@ def test_paypal_timeout_redacts_secrets(monkeypatch):
         PayPal().call("POST", "/v2/checkout/orders", {})
     assert error.value.status_code == 502
     assert "test-secret" not in error.value.detail
+
+
+def test_paypal_connection_failure_reports_stage_without_secrets(monkeypatch, caplog):
+    monkeypatch.setenv("PAYMENTS_ENABLED", "true")
+    monkeypatch.setenv("PAYPAL_CLIENT_ID", "test-id")
+    monkeypatch.setenv("PAYPAL_CLIENT_SECRET", "test-secret")
+    original = httpx.Client
+
+    def handler(request):
+        raise httpx.ConnectError("test-secret", request=request)
+
+    monkeypatch.setattr(
+        httpx,
+        "Client",
+        lambda **kwargs: original(transport=httpx.MockTransport(handler), **kwargs),
+    )
+    with pytest.raises(HTTPException) as error:
+        PayPal().call("POST", "/v2/checkout/orders", {})
+    assert error.value.status_code == 502
+    assert error.value.detail == "PayPal sandbox could not be reached. No success was assumed."
+    assert "test-secret" not in caplog.text

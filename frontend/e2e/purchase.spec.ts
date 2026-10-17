@@ -47,3 +47,14 @@ test('checkout buyer approval stays separate from capture with an explicitly moc
   await expect(page.getByText('PayPal buyer approval verified. No capture has occurred.')).toBeVisible();
   await expect(page.getByText('Capture is locked until the owner separately enables and authorizes it.')).toBeVisible();
 });
+
+test('order transport failure is identified before buyer checkout', async ({ page }) => {
+  await page.route('**/api/config', route => route.fulfill({ json: { payments_enabled: true, capture_enabled: false, client_id: 'test-fixture' } }));
+  await page.route('https://www.paypal.com/sdk/js?*', route => route.fulfill({ contentType: 'application/javascript', body: `window.paypal = { Buttons(options) { return { async render(target) { const b = document.createElement('button'); b.textContent = 'PayPal SDK fixture'; b.onclick = async () => { try { await options.createOrder(); } catch { options.onError(); } }; target.append(b); }, async close() {} }; } };` }));
+  await page.route('**/api/proposals/*/order', route => route.fulfill({ status: 502, json: { detail: 'PayPal sandbox could not be reached. No success was assumed.' } }));
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Find my best fit' }).click();
+  await page.getByRole('button', { name: 'Approve $59.00 USD' }).click();
+  await page.getByRole('button', { name: 'PayPal SDK fixture' }).click();
+  await expect(page.getByRole('status')).toContainText('PayPal sandbox could not be reached');
+});
