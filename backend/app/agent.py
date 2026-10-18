@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import re
 import time
@@ -9,6 +10,8 @@ from google.genai import types
 from pydantic import BaseModel, ConfigDict, Field
 
 from .catalog import CATALOG, policy, product
+
+logger = logging.getLogger(__name__)
 
 
 class Intent(BaseModel):
@@ -163,12 +166,25 @@ def recommend(text, budget, quantity):
         if key and model:
             try:
                 result = GeminiProvider(key, model).recommend(text, budget, quantity)
+                logger.info(
+                    "AI provider success provider=gemini model=%s latency_ms=%s",
+                    result.resolved_model or result.requested_model,
+                    result.latency_ms,
+                )
                 return result.intent, "Gemini"
-            except ValueError:
+            except ValueError as exc:
+                logger.warning(
+                    "AI provider output rejected provider=gemini error_type=%s",
+                    type(exc).__name__,
+                )
                 return fallback(
                     text, budget, quantity
                 ), "deterministic fallback (non-AI; Gemini output rejected)"
-            except Exception:
+            except Exception as exc:
+                logger.warning(
+                    "AI provider unavailable provider=gemini error_type=%s",
+                    type(exc).__name__,
+                )
                 return fallback(
                     text, budget, quantity
                 ), "deterministic fallback (non-AI; Gemini unavailable)"

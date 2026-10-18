@@ -17,7 +17,7 @@
 | Genuine sandbox buyer approval | Passed | One USD 59.00 order reached PayPal APPROVED and backend BUYER_APPROVED |
 | Genuine sandbox capture | Not run | Zero capture calls; `CAPTURE_ENABLED=false` |
 | Genuine hosted AI | Partial pass | One structured request succeeded; broader hosted suite hit provider availability/quota limits |
-| PostgreSQL | Not run | SQLite used locally |
+| PostgreSQL | Passed locally | Disposable PostgreSQL 17.11; migrations, restart persistence, ownership and mocked idempotency |
 | Hosted deployment | Not run | No public application URL exists |
 
 Synthetic scenarios cover affordable and unaffordable products, wireless/quiet/noise-cancelling preferences, unsupported requests and unsafe payment-tool instructions. Expected outputs are independently specified in the parameter table. This is a small deterministic evaluation, **not an LLM accuracy benchmark**. No claim of general prompt-injection robustness or live AI success follows from it.
@@ -37,5 +37,7 @@ October 16 Phase 3 rerun: 79 backend tests passed and 1 credential-gated OAuth t
 October 17 integration freeze: one genuine Gemini request using `gemini-flash-latest` resolved to `gemini-3.8-flash`, returned schema-valid grounded output, and completed in 24,434 ms. Reported usage was 540 prompt, 48 response, and 686 total tokens. Remaining hosted cases received 503/429 provider responses and were not counted as passes. The release regression passed 90 backend tests with 1 credential-gated test skipped, Ruff, ESLint, TypeScript, the Next.js production build, and all 6 Playwright desktop/mobile tests. PayPal order creation and capture were not called.
 
 October 18 buyer-approval milestone: PayPal Sandbox buyer approval and backend reconciliation passed as described above. The release-documentation regression passed 100 backend tests with 1 opt-in test skipped, Ruff, ESLint, TypeScript, the Next.js production build and all 10 Playwright tests. This is evidence for the implemented hackathon slice, not PostgreSQL, deployment or production readiness.
+
+October 18 Phase 2 database hardening: Alembic upgraded both a preserved legacy SQLite database and a clean disposable PostgreSQL 17.11 database. The PostgreSQL integration test passed clean migration, restart persistence, owner isolation, mocked order idempotency and single buyer-approval audit behavior. The regular backend suite passed 104 tests with the PostgreSQL and real-PayPal opt-in tests skipped; the dedicated migration suite passed 2/2 with `TEST_POSTGRES_URL` enabled. Ruff, ESLint, TypeScript, the production build and 10 Playwright tests passed. No PayPal API call or hosted deployment occurred.
 
 Commands: `python -m pytest -q backend`; `python -m ruff format backend`; `python -m ruff check backend --select E9,F63,F7,F82`; frontend `npm run lint`, `npm run typecheck`, `npm run build`, `npm run test:e2e`.

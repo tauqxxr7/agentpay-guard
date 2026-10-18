@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.pool import StaticPool
 from app import main
-from app.agent import recommend
+from app.agent import Intent, recommend
 from app.catalog import product, policy
 
 
@@ -14,6 +14,7 @@ def client(monkeypatch):
     engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
+    main.Base.metadata.create_all(engine)
     monkeypatch.setattr(main, "engine", engine)
     monkeypatch.delenv("AI_PROVIDER", raising=False)
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
@@ -383,3 +384,41 @@ def test_rate_limit(client):
         ).status_code
         == 429
     )
+
+
+def test_public_session_creation_uses_shared_database_quota(client, monkeypatch):
+    monkeypatch.setenv("SESSION_CREATION_LIMIT_PER_MINUTE", "2")
+    assert client.post("/sessions").status_code == 200
+    assert client.post("/sessions").status_code == 429
+
+
+def test_gemini_requests_use_shared_database_quota(client, monkeypatch):
+    monkeypatch.setenv("AI_PROVIDER", "gemini")
+    monkeypatch.setenv("GEMINI_API_KEY", "configured-test-key")
+    monkeypatch.setenv("GEMINI_MODEL", "test-model")
+    monkeypatch.setenv("GEMINI_REQUESTS_PER_HOUR", "1")
+    monkeypatch.setattr(
+        main,
+        "recommend",
+        lambda *args: (Intent(sku="KEY-01", clarification=None), "Gemini"),
+    )
+    body = {"request": "wireless keyboard", "budget_cents": 8000}
+    assert client.post("/proposals", json=body).status_code == 200
+    assert client.post("/proposals", json=body).status_code == 429
+
+
+def test_ready_reports_database_failure(client):
+    class BrokenSession:
+        def execute(self, _statement):
+            raise RuntimeError("database-password-must-not-leak")
+
+    def broken_db():
+        yield BrokenSession()
+
+    main.app.dependency_overrides[main.db] = broken_db
+    try:
+        response = client.get("/ready")
+    finally:
+        main.app.dependency_overrides.clear()
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Database is unavailable"}

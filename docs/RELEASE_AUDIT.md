@@ -9,7 +9,8 @@
 - [x] Genuine PayPal sandbox OAuth and uncaptured order creation independently verified.
 - [x] Genuine PayPal sandbox buyer approval independently verified.
 - [ ] Genuine PayPal sandbox capture independently verified; zero captures occurred.
-- [ ] PostgreSQL and public-deployment hardening verified.
+- [x] Disposable PostgreSQL migration, persistence, ownership and idempotency verified.
+- [ ] Managed PostgreSQL, backups and public-deployment hardening verified.
 - [x] Public repository and visible license verified remotely.
 - [ ] Fresh-machine reproducible setup independently verified.
 - [ ] Public hosted demo, if selected, verified in browser.

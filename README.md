@@ -4,7 +4,7 @@ AI-powered purchasing with verifiable decisions, policy-controlled spending, and
 
 An assistant can suggest a purchase; it should not silently spend your money. AgentPay Guard turns a request into a catalog-grounded proposal, checks deterministic policies, records your approval, and initiates PayPal sandbox checkout.
 
-**Status:** one genuine hosted Gemini request and one genuine PayPal Sandbox buyer approval are verified. The approved order was USD 59.00 and reached `BUYER_APPROVED` only after a server-side PayPal lookup. No capture occurred and `CAPTURE_ENABLED=false`. SQLite is verified locally; PostgreSQL and public deployment are not verified. Fictional inventory, no fulfillment, sandbox only.
+**Status:** one genuine hosted Gemini request and one genuine PayPal Sandbox buyer approval are verified. The approved order was USD 59.00 and reached `BUYER_APPROVED` only after a server-side PayPal lookup. No capture occurred and `CAPTURE_ENABLED=false`. SQLite and a disposable local PostgreSQL 17.11 instance are verified; managed hosted PostgreSQL and public deployment are not. Fictional inventory, no fulfillment, sandbox only.
 
 ## Features
 
@@ -24,6 +24,7 @@ Copy-Item .env.example .env
 python -m venv .venv
 .\.venv\Scripts\python -m pip install -r backend/requirements.txt
 cd backend
+..\.venv\Scripts\python -m alembic upgrade head
 ..\.venv\Scripts\python -m uvicorn app.main:app --env-file ../.env --port 8000
 ```
 
@@ -78,6 +79,6 @@ Stack: Next.js, React, TypeScript, Tailwind, FastAPI, Pydantic, SQLAlchemy, Post
 
 Gemini failures use a deterministic fallback whose mode is visibly labelled `non-AI`; fallback output is never reported as hosted inference. The model cannot call payment tools. Client callbacks cannot mark an order approved or paid. No live PayPal endpoint is configurable. Capture code exists but has not been exercised against PayPal, PostgreSQL has not been verified, and no hosted demo exists. This is a hackathon build, not production-certified financial infrastructure.
 
-Read [feasibility](docs/FEASIBILITY.md), [architecture](docs/ARCHITECTURE.md), [security](docs/SECURITY.md), [limitations](docs/KNOWN_LIMITATIONS.md), [deployment](docs/DEPLOYMENT.md), [progress](docs/PROGRESS.md), and [blockers](docs/BLOCKERS.md).
+Read [feasibility](docs/FEASIBILITY.md), [architecture](docs/ARCHITECTURE.md), [database migrations](docs/DATABASE.md), [security](docs/SECURITY.md), [limitations](docs/KNOWN_LIMITATIONS.md), [deployment](docs/DEPLOYMENT.md), [progress](docs/PROGRESS.md), and [blockers](docs/BLOCKERS.md).
 
 License: [MIT](LICENSE).

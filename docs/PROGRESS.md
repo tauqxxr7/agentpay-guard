@@ -38,3 +38,11 @@ Synchronize the verified release documentation, then add PostgreSQL migrations a
 - Added a server-verified `BUYER_APPROVED` state between order creation and capture.
 - Added an independent server-only `CAPTURE_ENABLED` gate and explicit capture confirmation body.
 - Verified 90 backend tests, Ruff, ESLint, TypeScript, production build, and 6 desktop/mobile Playwright tests without creating a PayPal order or capture.
+
+## PostgreSQL and public-demo hardening — 2026-10-18
+
+- Added an Alembic initial schema supporting clean databases and adoption of the existing local SQLite schema without copying its records elsewhere.
+- Verified clean migration, restart persistence, ownership and mocked payment idempotency against disposable PostgreSQL 17.11.
+- Added database-backed shared quotas for session issuance and hosted Gemini calls, sanitized provider logs, `/ready`, exact-origin CORS parsing and a PayPal-compatible CSP.
+- Prepared managed PostgreSQL and fail-safe pre-deploy migrations in `render.yaml`; both payment flags remain false.
+- No PayPal order, capture, deployment or credential change occurred.

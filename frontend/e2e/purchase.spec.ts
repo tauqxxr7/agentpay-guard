@@ -1,6 +1,9 @@
 import { test, expect } from '@playwright/test';
 test('proposal, approval, and audit flow without credentials', async ({ page }, testInfo) => {
-  await page.goto('/');
+  const response = await page.goto('/');
+  const csp = response?.headers()['content-security-policy'] || '';
+  expect(csp).toContain("default-src 'self'");
+  expect(csp).toContain('https://www.paypal.com');
   await page.getByRole('button', { name: 'Find my best fit' }).click();
   await expect(page.getByRole('heading', { name: 'Studio Keyboard' })).toBeVisible();
   await expect(page.getByText('deterministic fallback (non-AI)', { exact: true })).toBeVisible();
