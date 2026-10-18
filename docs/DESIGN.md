@@ -4,7 +4,7 @@
 
 AgentPay Guard uses a light financial workspace with a dark ink-violet navigation rail. It combines Mercury's premium restraint, Linear's precise hierarchy, Ramp's approval clarity, and Cursor's contextual assistant pattern without copying any product's branding or layout.
 
-The primary experience runs from a natural-language request to a grounded proposal, deterministic policy validation, explicit human approval, PayPal buyer approval, and verified capture. The interface never presents a `CREATED` PayPal order as paid.
+The primary experience runs from a natural-language request to a grounded proposal, deterministic policy validation, explicit human approval and server-verified PayPal buyer approval. Capture is a separate disabled stage and has not been genuinely exercised. The interface never presents a `CREATED` or merely `APPROVED` PayPal order as paid.
 
 ## Tokens
 

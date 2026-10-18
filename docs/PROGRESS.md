@@ -4,7 +4,7 @@
 
 - Inspected empty workspace; checked official rules and PayPal/Gemini docs; conditional GO documented.
 - Replaced the Anthropic HTTP adapter with the official Google Gen AI SDK, native Pydantic structured output, bounded retries, measured provider metadata, and explicit fallback reasons.
-- Initialized local Git repository; remote lookup returned repository not found/inaccessible.
+- Initialized Git and published the MIT-licensed repository at `https://github.com/tauqxxr7/agentpay-guard`.
 - Next.js/FastAPI vertical slice: request → validated recommendation → explicit approval → audit/history.
 - Controlled six-product demo catalog, quantity, budget and deterministic policy validation.
 - Hosted AI adapter with strict output checks and clearly labelled non-AI fallback.
@@ -15,15 +15,15 @@
 
 ## Verified
 
-79 backend tests passed; one credential-gated OAuth test skipped. Six desktop/mobile browser tests passed, including explicitly mocked checkout initiation. Ruff, lint, strict TypeScript, the Next.js 16.4.2 production build, and the production dependency audit passed. See EVALUATION.md.
+The most recent regression passed 100 backend tests with one opt-in test skipped and 10 desktop/mobile browser tests, including explicitly mocked checkout paths. Ruff, ESLint, strict TypeScript and the Next.js 16.4.2 production build passed. See EVALUATION.md.
 
 ## Not complete
 
-One genuine Gemini request is verified; broader hosted evaluation remains partial because later calls received 503/429 responses. PayPal buyer checkout/capture, PostgreSQL testing, public repository, deployment, video, Devpost entry and final release audit remain unverified. Genuine PayPal sandbox OAuth and one uncaptured order creation were verified on October 16, 2026. Security limitations and incomplete product scope are recorded in KNOWN_LIMITATIONS.md. No live financial operation or capture occurred.
+One genuine Gemini request is verified; broader hosted evaluation remains partial because later calls received 503/429 responses. Genuine PayPal Sandbox OAuth, order creation and buyer approval are verified for one USD 59.00 order. The backend reached `BUYER_APPROVED` after server verification and recorded one approval audit event. Zero captures occurred and `CAPTURE_ENABLED=false`. PostgreSQL, public deployment, video and the Devpost entry remain unverified. Security limitations and incomplete scope are recorded in KNOWN_LIMITATIONS.md.
 
 ## Next milestone
 
-Owner configures the hosted-model settings in ignored `.env`. Verify AI, then obtain explicit approval for a genuine sandbox buyer checkout and capture. Address deployment hardening before publishing. Do not claim hackathon readiness until all release checklist items pass.
+Synchronize the verified release documentation, then add PostgreSQL migrations and deployment abuse controls before hosting. Record the actual approved-but-uncaptured flow accurately. Do not claim production readiness or completed payment.
 # Premium fintech UI redesign — 2026-10-17
 
 - Reworked the Next.js frontend around a Mercury-inspired premium financial workspace, with original AgentPay Guard colors and composition.

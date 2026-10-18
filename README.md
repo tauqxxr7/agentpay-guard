@@ -4,14 +4,14 @@ AI-powered purchasing with verifiable decisions, policy-controlled spending, and
 
 An assistant can suggest a purchase; it should not silently spend your money. AgentPay Guard turns a request into a catalog-grounded proposal, checks deterministic policies, records your approval, and initiates PayPal sandbox checkout.
 
-**Status:** local implementation; one genuine Gemini request and PayPal Sandbox OAuth/order creation are verified. Buyer checkout, capture, PostgreSQL, deployment, and public publishing remain pending. Fictional inventory, no fulfillment, sandbox only.
+**Status:** one genuine hosted Gemini request and one genuine PayPal Sandbox buyer approval are verified. The approved order was USD 59.00 and reached `BUYER_APPROVED` only after a server-side PayPal lookup. No capture occurred and `CAPTURE_ENABLED=false`. SQLite is verified locally; PostgreSQL and public deployment are not verified. Fictional inventory, no fulfillment, sandbox only.
 
 ## Features
 
 - Natural-language requests, explicit USD budget, quantity, catalog comparison.
 - Hosted Gemini adapter with native Pydantic structured output; clearly labelled deterministic non-AI fallback.
 - Server checks SKU, merchant, category, availability, budget and price changes.
-- Explicit approval before official PayPal checkout; server-verified capture status.
+- Explicit approval before official PayPal checkout; server-verified buyer approval and separately gated capture code.
 - Isolated session history and timestamped decision audit.
 - Responsive workspace, failure/empty states and judge demo guide.
 
@@ -70,13 +70,13 @@ flowchart LR
   UI --> Human[Explicit approval]
   Human --> API
   API --> PayPal[PayPal sandbox]
-  PayPal --> Verify[Server capture verification]
+  PayPal --> Verify[Server order verification]
   Verify --> DB
 ```
 
 Stack: Next.js, React, TypeScript, Tailwind, FastAPI, Pydantic, SQLAlchemy, PostgreSQL/SQLite, pytest, Playwright, PayPal Orders/JavaScript SDK and the Google Gen AI SDK.
 
-The model cannot call payment tools. Client callbacks cannot mark a payment complete. No live PayPal endpoint is configurable. This is a hackathon build, not production-certified financial infrastructure.
+Gemini failures use a deterministic fallback whose mode is visibly labelled `non-AI`; fallback output is never reported as hosted inference. The model cannot call payment tools. Client callbacks cannot mark an order approved or paid. No live PayPal endpoint is configurable. Capture code exists but has not been exercised against PayPal, PostgreSQL has not been verified, and no hosted demo exists. This is a hackathon build, not production-certified financial infrastructure.
 
 Read [feasibility](docs/FEASIBILITY.md), [architecture](docs/ARCHITECTURE.md), [security](docs/SECURITY.md), [limitations](docs/KNOWN_LIMITATIONS.md), [deployment](docs/DEPLOYMENT.md), [progress](docs/PROGRESS.md), and [blockers](docs/BLOCKERS.md).
 

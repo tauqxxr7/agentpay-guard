@@ -1,6 +1,6 @@
 # Feasibility — checked October 16, 2026
 
-**Conditional GO for AgentPay Guard.** Sandbox Orders supports server-created orders, buyer approval, capture and server-side lookup. Account access and a genuine transaction are not yet verified. No concept pivot.
+**GO for the implemented Sandbox buyer-approval slice.** Sandbox OAuth, order creation, buyer approval and server-side lookup were genuinely verified. Capture is implemented behind a separate disabled gate but has not been exercised. No concept pivot.
 
 ## Official evidence
 
@@ -15,7 +15,7 @@
 
 ## Repository verification
 
-`git ls-remote https://github.com/tauqxxr7/agentpay-guard.git` returned **Repository not found**. This means absent or inaccessible, not proof that no private repository exists. Local repository initialized; no public repository created or pushed.
+The public repository exists at `https://github.com/tauqxxr7/agentpay-guard`. Remote synchronization must still be checked after every release commit.
 
 ## Alternative comparison
 
@@ -23,4 +23,4 @@ AgentPay Guard has a direct, demonstrable checkout path and explicit approval bo
 
 ## Blocking gates
 
-Owner must configure sandbox credentials locally, verify personal eligibility, configure an AI account/model, and authorize any genuine sandbox checkout. Public repository, hosting, recording/upload and submission remain separate approval gates.
+Sandbox and Gemini credentials are configured locally and remain ignored. PostgreSQL verification, hosting, recording/upload, entrant eligibility and submission remain incomplete. Any future capture still requires separate explicit authorization.
