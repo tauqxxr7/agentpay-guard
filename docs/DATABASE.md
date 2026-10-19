@@ -12,11 +12,11 @@ python -m alembic upgrade head
 python -m uvicorn app.main:app --env-file ../.env --port 8000
 ```
 
-`DATABASE_URL` may be `sqlite:///./agentpay.db`, `postgresql://...`, or `postgresql+psycopg://...`. Render-style PostgreSQL URLs are normalized to the psycopg 3 driver. Persistent databases are never initialized with `create_all`; startup assumes `alembic upgrade head` completed successfully. Only isolated in-memory SQLite tests create their schema directly.
+`DATABASE_URL` may be `sqlite:///./agentpay.db`, `postgresql://...`, or `postgresql+psycopg://...`. PostgreSQL URLs are normalized to the psycopg 3 driver. With `APP_ENV=production`, the application rejects a missing URL, SQLite, and PostgreSQL connections without `sslmode=require`, `verify-ca`, or `verify-full`. Persistent databases are never initialized with `create_all`; startup assumes `alembic upgrade head` completed successfully. Only isolated in-memory SQLite tests create their schema directly.
 
 ## Deployment and rollback
 
-Render runs `alembic upgrade head` as a pre-deploy command. A failed migration stops deployment before the new process starts. Back up PostgreSQL before every schema change and test both upgrade and downgrade on disposable data. The initial migration inspects the live schema so it can safely adopt the legacy local SQLite tables; validate it online against a disposable database rather than using Alembic's offline SQL mode.
+For the minimum-cost deployment, migrations are a deliberate local operator step using Neon's direct TLS endpoint; Render Free never runs them at worker startup or per request. Run `python -m alembic upgrade head`, `current`, and `check` before the first deployment and before deploying each schema-changing release. Back up PostgreSQL before every schema change and test both upgrade and downgrade on disposable data. The initial migration inspects the live schema so it can safely adopt legacy local SQLite tables; validate it online against a disposable database rather than using Alembic's offline SQL mode.
 
 The initial downgrade removes all AgentPay Guard tables and their data. Do not run `alembic downgrade base` against a database containing records that must be retained. Restore from a verified managed backup when a destructive rollback would otherwise be required. Future migrations should prefer forward fixes and explicitly document data transformations.
 

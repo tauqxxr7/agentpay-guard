@@ -45,4 +45,10 @@ Synchronize the verified release documentation, then add PostgreSQL migrations a
 - Verified clean migration, restart persistence, ownership and mocked payment idempotency against disposable PostgreSQL 17.11.
 - Added database-backed shared quotas for session issuance and hosted Gemini calls, sanitized provider logs, `/ready`, exact-origin CORS parsing and a PayPal-compatible CSP.
 - Prepared managed PostgreSQL and fail-safe pre-deploy migrations in `render.yaml`; both payment flags remain false.
+
+## Minimum-cost deployment preparation — 2026-10-19
+
+- Replaced the managed Render database and paid pre-deploy step with one Render Free service and a private operator-supplied Neon TLS URL.
+- Added production database/TLS/schema safeguards, hashed per-client quotas, safe expired-record cleanup, Host/Origin checks, and cold-start-aware frontend errors.
+- Kept `PAYMENTS_ENABLED=false` and `CAPTURE_ENABLED=false`; no deployment or provider transaction was performed.
 - No PayPal order, capture, deployment or credential change occurred.

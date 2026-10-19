@@ -4,7 +4,7 @@ import os
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from app.main import Base, normalize_database_url
+from app.main import Base, normalize_database_url, validate_database_configuration
 
 config = context.config
 if config.config_file_name:
@@ -12,6 +12,9 @@ if config.config_file_name:
 
 database_url = normalize_database_url(
     os.getenv("DATABASE_URL", config.get_main_option("sqlalchemy.url"))
+)
+database_url = validate_database_configuration(
+    database_url, os.getenv("APP_ENV", "development").lower() == "production"
 )
 config.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))
 target_metadata = Base.metadata

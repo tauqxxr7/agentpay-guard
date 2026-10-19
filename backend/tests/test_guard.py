@@ -1,8 +1,10 @@
 import copy
 import time
+from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from starlette.requests import Request
+from sqlalchemy import create_engine, text
 from sqlalchemy.pool import StaticPool
 from app import main
 from app.agent import Intent, recommend
@@ -392,6 +394,39 @@ def test_public_session_creation_uses_shared_database_quota(client, monkeypatch)
     assert client.post("/sessions").status_code == 429
 
 
+def test_rotating_sessions_cannot_bypass_client_quota(client, monkeypatch):
+    monkeypatch.setenv("SESSION_CREATION_LIMIT_PER_MINUTE", "100")
+    monkeypatch.setenv("CLIENT_SESSION_LIMIT_PER_MINUTE", "2")
+    assert client.post("/sessions", headers={"X-Forwarded-For": "198.51.100.1"}).status_code == 200
+    assert client.post("/sessions", headers={"X-Forwarded-For": "203.0.113.9"}).status_code == 429
+
+
+def test_cleanup_preserves_sessions_with_transaction_history(client):
+    now = time.time()
+    with main.Session(main.engine) as s:
+        orphan = main.BrowserSession(token="expired-orphan", created=now - 90000, calls=0)
+        retained = main.BrowserSession(token="expired-owner", created=now - 90000, calls=0)
+        orphan_token = orphan.token
+        retained_token = retained.token
+        s.add_all([orphan, retained])
+        s.add(main.RateLimitBucket(key="expired-bucket", count=1, expires=now - 1))
+        s.add(
+            main.Proposal(
+                id="retained-history",
+                owner=retained_token,
+                data={"product": {"sku": "KEY-01"}},
+                created=now - 90000,
+                audit=[],
+            )
+        )
+        s.commit()
+        main.consume_quota(s, "cleanup-test", 2, 60)
+        assert s.get(main.RateLimitBucket, "expired-bucket") is None
+        assert s.get(main.BrowserSession, orphan_token) is None
+        assert s.get(main.BrowserSession, retained_token) is not None
+        assert s.get(main.Proposal, "retained-history") is not None
+
+
 def test_gemini_requests_use_shared_database_quota(client, monkeypatch):
     monkeypatch.setenv("AI_PROVIDER", "gemini")
     monkeypatch.setenv("GEMINI_API_KEY", "configured-test-key")
@@ -422,3 +457,84 @@ def test_ready_reports_database_failure(client):
         main.app.dependency_overrides.clear()
     assert response.status_code == 503
     assert response.json() == {"detail": "Database is unavailable"}
+
+
+def test_ready_requires_current_alembic_revision(client):
+    assert client.get("/ready").status_code == 503
+    with main.engine.begin() as connection:
+        connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)"))
+        connection.execute(
+            text("INSERT INTO alembic_version (version_num) VALUES (:revision)"),
+            {"revision": main.SCHEMA_REVISION},
+        )
+    response = client.get("/ready")
+    assert response.status_code == 200
+    assert response.json()["schema"] == main.SCHEMA_REVISION
+    assert response.json()["providers"]["paypal"] == {
+        "configuration": "disabled",
+        "connectivity": "not_probed",
+        "environment": "sandbox",
+    }
+
+
+@pytest.mark.parametrize(
+    "url",
+    ["", "sqlite:///./production.db", "postgresql://demo-user@example.test/db"],
+)
+def test_production_database_rejects_missing_sqlite_or_non_tls_url(url):
+    with pytest.raises(RuntimeError):
+        main.validate_database_configuration(url, production=True)
+
+
+def test_neon_postgres_url_is_normalized_and_requires_tls():
+    result = main.validate_database_configuration(
+        "postgresql://demo-user@ep-example.neon.tech/app?sslmode=require&channel_binding=require",
+        production=True,
+    )
+    assert result.startswith("postgresql+psycopg://")
+    assert "sslmode=require" in result
+
+
+def test_forwarded_client_is_used_only_for_trusted_immediate_proxy(monkeypatch):
+    scope = {
+        "type": "http",
+        "method": "POST",
+        "scheme": "https",
+        "server": ("api.example.test", 443),
+        "path": "/sessions",
+        "query_string": b"",
+        "headers": [(b"x-forwarded-for", b"198.51.100.7")],
+        "client": ("10.0.0.5", 1234),
+    }
+    request = Request(scope)
+    untrusted = main.client_quota_key(request)
+    monkeypatch.setenv("TRUSTED_PROXY_CIDRS", "10.0.0.0/24")
+    trusted = main.client_quota_key(request)
+    assert trusted != untrusted
+    assert trusted == main.hashlib.sha256(b"198.51.100.7").hexdigest()[:24]
+
+
+def test_production_unsafe_requests_require_expected_host_and_origin(client, monkeypatch):
+    monkeypatch.setattr(main, "production", True)
+    monkeypatch.setenv("ALLOWED_HOSTS", "api.example.test")
+    assert client.post("/sessions", headers={"host": "api.example.test"}).status_code == 403
+    assert client.post(
+        "/sessions",
+        headers={"host": "wrong.example.test", "origin": "http://localhost:3000"},
+    ).status_code == 400
+    assert client.post(
+        "/sessions",
+        headers={"host": "api.example.test", "origin": "http://localhost:3000"},
+    ).status_code == 200
+
+
+def test_render_free_blueprint_keeps_payments_disabled():
+    blueprint = (Path(__file__).resolve().parents[2] / "render.yaml").read_text()
+    assert blueprint.count("type: web") == 1
+    assert "plan: free" in blueprint
+    assert "preDeployCommand" not in blueprint
+    assert "databases:" not in blueprint
+    assert "fromDatabase:" not in blueprint
+    assert "--no-proxy-headers" in blueprint
+    assert "PAYMENTS_ENABLED\n        value: 'false'" in blueprint
+    assert "CAPTURE_ENABLED\n        value: 'false'" in blueprint

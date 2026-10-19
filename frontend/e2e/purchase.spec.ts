@@ -59,7 +59,15 @@ test('order transport failure is identified before buyer checkout', async ({ pag
   await page.getByRole('button', { name: 'Find my best fit' }).click();
   await page.getByRole('button', { name: 'Approve $59.00 USD' }).click();
   await page.getByRole('button', { name: 'PayPal SDK fixture' }).click();
-  await expect(page.getByRole('status')).toContainText('PayPal sandbox could not be reached');
+  await expect(page.getByRole('status')).toContainText('backend may be waking up');
+});
+
+test('Render cold-start response is actionable and does not imply success', async ({ page }) => {
+  await page.route('**/api/catalog', route => route.fulfill({ status: 503, json: { detail: 'Database is unavailable' } }));
+  await page.goto('/');
+  await expect(page.getByRole('status')).toContainText('backend may be waking up');
+  await expect(page.getByRole('button', { name: 'Find my best fit' })).toBeDisabled();
+  await expect(page.locator('body')).not.toContainText('Payment completed');
 });
 
 test('owned persisted order is explicitly resumed without creating a replacement', async ({ page }) => {

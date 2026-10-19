@@ -38,7 +38,7 @@ npm run dev
 
 Open http://localhost:3000. Without credentials, the fallback recommendation, policies, approval and audit work; checkout is disabled. Root `.env` is ignored. Configure secrets locally, never in chat, screenshots or commits.
 
-For hosted AI set `AI_PROVIDER=gemini`, `GEMINI_API_KEY`, and `GEMINI_MODEL=gemini-flash-latest` in ignored `.env`. The API resolves the alias to an actual model version during explicit evaluation. For PayPal follow [sandbox setup](docs/PAYPAL_INTEGRATION.md). `PAYMENTS_ENABLED` permits sandbox order creation; the separate server-only `CAPTURE_ENABLED` gate must also be explicitly enabled before capture. PostgreSQL uses `DATABASE_URL=postgresql+psycopg://...`; SQLite is the local default.
+For hosted AI set `AI_PROVIDER=gemini`, `GEMINI_API_KEY`, and `GEMINI_MODEL=gemini-flash-latest` in ignored `.env`. The API resolves the alias to an actual model version during explicit evaluation. For PayPal follow [sandbox setup](docs/PAYPAL_INTEGRATION.md). `PAYMENTS_ENABLED` permits sandbox order creation; the separate server-only `CAPTURE_ENABLED` gate must also be explicitly enabled before capture. PostgreSQL uses a TLS `DATABASE_URL=postgresql+psycopg://...?sslmode=require`; SQLite is the local development default. See the [minimum-cost deployment runbook](docs/DEPLOYMENT.md).
 
 ## Validation
 
@@ -77,7 +77,7 @@ flowchart LR
 
 Stack: Next.js, React, TypeScript, Tailwind, FastAPI, Pydantic, SQLAlchemy, PostgreSQL/SQLite, pytest, Playwright, PayPal Orders/JavaScript SDK and the Google Gen AI SDK.
 
-Gemini failures use a deterministic fallback whose mode is visibly labelled `non-AI`; fallback output is never reported as hosted inference. The model cannot call payment tools. Client callbacks cannot mark an order approved or paid. No live PayPal endpoint is configurable. Capture code exists but has not been exercised against PayPal, PostgreSQL has not been verified, and no hosted demo exists. This is a hackathon build, not production-certified financial infrastructure.
+Gemini failures use a deterministic fallback whose mode is visibly labelled `non-AI`; fallback output is never reported as hosted inference. The model cannot call payment tools. Client callbacks cannot mark an order approved or paid. No live PayPal endpoint is configurable. Capture code exists but has not been exercised against PayPal. Disposable PostgreSQL 17.11 passed migration and persistence verification; Neon and the public deployment remain unverified. This is a hackathon build, not production-certified financial infrastructure.
 
 Read [feasibility](docs/FEASIBILITY.md), [architecture](docs/ARCHITECTURE.md), [database migrations](docs/DATABASE.md), [security](docs/SECURITY.md), [limitations](docs/KNOWN_LIMITATIONS.md), [deployment](docs/DEPLOYMENT.md), [progress](docs/PROGRESS.md), and [blockers](docs/BLOCKERS.md).
 

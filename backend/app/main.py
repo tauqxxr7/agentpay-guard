@@ -1,4 +1,5 @@
 import hashlib
+import ipaddress
 import logging
 import os
 import secrets
@@ -7,10 +8,12 @@ import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Literal
-from fastapi import FastAPI, Depends, Header, HTTPException
+from fastapi import FastAPI, Depends, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import create_engine, String, JSON, select, update, text, Index
+from sqlalchemy import create_engine, String, JSON, select, update, delete, text, Index
+from sqlalchemy.engine import make_url
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session
@@ -50,6 +53,8 @@ class Proposal(Base):
 
 
 logger = logging.getLogger(__name__)
+SCHEMA_REVISION = "20261018_0001"
+SESSION_TTL_SECONDS = 86400
 
 
 def normalize_database_url(value: str) -> str:
@@ -60,16 +65,35 @@ def normalize_database_url(value: str) -> str:
     return value
 
 
-url = normalize_database_url(os.getenv("DATABASE_URL", "sqlite:///./agentpay.db"))
+def validate_database_configuration(value: str, production: bool) -> str:
+    normalized = normalize_database_url(value)
+    if not production:
+        return normalized
+    if not value or not normalized.startswith("postgresql+psycopg://"):
+        raise RuntimeError("Production requires an explicit PostgreSQL DATABASE_URL")
+    sslmode = make_url(normalized).query.get("sslmode")
+    if sslmode not in {"require", "verify-ca", "verify-full"}:
+        raise RuntimeError("Production PostgreSQL requires TLS via sslmode")
+    return normalized
+
+
+production = os.getenv("APP_ENV", "development").lower() == "production"
+url = validate_database_configuration(
+    os.getenv("DATABASE_URL", "" if production else "sqlite:///./agentpay.db"),
+    production,
+)
 engine = create_engine(
     url,
     connect_args={"check_same_thread": False} if url.startswith("sqlite") else {},
     pool_pre_ping=not url.startswith("sqlite"),
+    pool_size=int(os.getenv("DATABASE_POOL_SIZE", "5")) if not url.startswith("sqlite") else 5,
+    max_overflow=int(os.getenv("DATABASE_MAX_OVERFLOW", "2")) if not url.startswith("sqlite") else 10,
 )
 
 
 @asynccontextmanager
 async def lifespan(app):
+    validate_database_configuration(os.getenv("DATABASE_URL", ""), production)
     if os.getenv("PAYMENTS_ENABLED") == "true" and not os.getenv("PAYPAL_MERCHANT_ID"):
         raise RuntimeError("PAYPAL_MERCHANT_ID is required when sandbox payments are enabled")
     yield
@@ -87,6 +111,27 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["Authorization", "Content-Type"],
 )
+
+
+def _configured_hosts() -> set[str]:
+    return {value.strip().lower() for value in os.getenv("ALLOWED_HOSTS", "").split(",") if value.strip()}
+
+
+@app.middleware("http")
+async def production_request_boundary(request: Request, call_next):
+    if production:
+        hosts = _configured_hosts()
+        if not hosts or (request.url.hostname or "").lower() not in hosts:
+            return JSONResponse(
+                status_code=400, content={"detail": "Invalid host"}
+            )
+        if request.method not in {"GET", "HEAD", "OPTIONS"}:
+            origin = request.headers.get("origin", "")
+            if not origin or origin not in allowed_origins:
+                return JSONResponse(
+                    status_code=403, content={"detail": "Origin is not allowed"}
+                )
+    return await call_next(request)
 
 
 def db():
@@ -113,11 +158,46 @@ def limited(s, token):
         raise HTTPException(429, "Session request limit reached.")
 
 
+def _trusted_proxy_networks():
+    networks = []
+    for value in os.getenv("TRUSTED_PROXY_CIDRS", "").split(","):
+        if value.strip():
+            networks.append(ipaddress.ip_network(value.strip()))
+    return networks
+
+
+def client_quota_key(request: Request) -> str:
+    peer = request.client.host if request.client else "unknown"
+    try:
+        peer_ip = ipaddress.ip_address(peer)
+    except ValueError:
+        peer_ip = None
+    forwarded = request.headers.get("x-forwarded-for", "").split(",", 1)[0].strip()
+    if peer_ip and forwarded and any(peer_ip in network for network in _trusted_proxy_networks()):
+        try:
+            peer = str(ipaddress.ip_address(forwarded))
+        except ValueError:
+            pass
+    return hashlib.sha256(peer.encode()).hexdigest()[:24]
+
+
+def cleanup_expired_security_records(s, now: float):
+    s.execute(delete(RateLimitBucket).where(RateLimitBucket.expires < now))
+    has_proposal = select(Proposal.id).where(Proposal.owner == BrowserSession.token).exists()
+    s.execute(
+        delete(BrowserSession).where(
+            BrowserSession.created < now - SESSION_TTL_SECONDS,
+            ~has_proposal,
+        )
+    )
+
+
 def consume_quota(s, name: str, limit: int, seconds: int):
     """Consume a database-backed shared quota that works across workers."""
     if limit < 1:
         raise HTTPException(503, "Service quota is disabled by operator configuration.")
     now = time.time()
+    cleanup_expired_security_records(s, now)
     window = int(now // seconds)
     key = f"{name}:{window}"
     values = {"key": key, "count": 0, "expires": (window + 1) * seconds}
@@ -206,10 +286,30 @@ def health():
 def ready(s: Session = Depends(db)):
     try:
         s.execute(text("SELECT 1"))
+        revision = s.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
+        if revision != SCHEMA_REVISION:
+            raise RuntimeError("schema revision mismatch")
     except Exception as exc:
         logger.warning("readiness database failure type=%s", type(exc).__name__)
         raise HTTPException(503, "Database is unavailable") from None
-    return {"status": "ready", "database": engine.dialect.name}
+    return {
+        "status": "ready",
+        "database": engine.dialect.name,
+        "schema": SCHEMA_REVISION,
+        "providers": {
+            "gemini": {
+                "configuration": "configured" if os.getenv("GEMINI_API_KEY") else "fallback",
+                "connectivity": "not_probed",
+            },
+            "paypal": {
+                "configuration": "disabled"
+                if os.getenv("PAYMENTS_ENABLED") != "true"
+                else "configured",
+                "connectivity": "not_probed",
+                "environment": "sandbox",
+            },
+        },
+    }
 
 
 @app.get("/config")
@@ -224,11 +324,17 @@ def config():
 
 
 @app.post("/sessions")
-def session(s: Session = Depends(db)):
+def session(request: Request, s: Session = Depends(db)):
     consume_quota(
         s,
         "session-create",
         int(os.getenv("SESSION_CREATION_LIMIT_PER_MINUTE", "30")),
+        60,
+    )
+    consume_quota(
+        s,
+        "client-session-" + client_quota_key(request),
+        int(os.getenv("CLIENT_SESSION_LIMIT_PER_MINUTE", "5")),
         60,
     )
     token = secrets.token_urlsafe(32)
@@ -247,8 +353,19 @@ def catalog():
 
 
 @app.post("/proposals")
-def propose(body: PurchaseRequest, token=Depends(owner), s: Session = Depends(db)):
+def propose(
+    body: PurchaseRequest,
+    request: Request,
+    token=Depends(owner),
+    s: Session = Depends(db),
+):
     limited(s, token)
+    consume_quota(
+        s,
+        "client-proposal-" + client_quota_key(request),
+        int(os.getenv("CLIENT_PROPOSAL_LIMIT_PER_MINUTE", "10")),
+        60,
+    )
     if (
         os.getenv("AI_PROVIDER", "").lower() == "gemini"
         and os.getenv("GEMINI_API_KEY")

@@ -12,6 +12,18 @@ declare global { interface Window { paypal?: { Buttons: (options: { createOrder:
 const money = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n / 100);
 const redactOrder = (id?: string) => id && id.length > 8 ? `${id.slice(0, 4)}...${id.slice(-4)}` : 'unavailable';
 const checkoutLog = (stage: string, detail: Record<string, string> = {}) => console.info('[AgentPay Guard] PayPal diagnostic', { stage, ...detail });
+const backendFetch = (path: string, init?: RequestInit) => fetch('/api' + path, { ...init, signal: AbortSignal.timeout(45000) });
+
+async function responseJson(response: Response) {
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    if (response.status === 502 || response.status === 503 || response.status === 504) {
+      throw new Error('The demo backend may be waking up. Wait a moment, then try again.');
+    }
+    throw new Error(typeof data.detail === 'string' ? data.detail : 'Please check your inputs and try again.');
+  }
+  return data;
+}
 
 export default function Home() {
   const [tab, setTab] = useState('Workspace');
@@ -29,21 +41,24 @@ export default function Home() {
   const [ready, setReady] = useState(false);
   const checkout = useRef<HTMLDivElement>(null);
   const api = useCallback(async (path: string, body?: unknown) => {
-    const r = await fetch('/api' + path, { method: body === undefined ? 'GET' : 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: body === undefined ? undefined : JSON.stringify(body) });
-    const data = await r.json();
+    const r = await backendFetch(path, { method: body === undefined ? 'GET' : 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: body === undefined ? undefined : JSON.stringify(body) });
+    const data = await r.json().catch(() => ({}));
     if (r.status === 401) sessionStorage.removeItem('guard-session');
-    if (!r.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'Please check your inputs and try again.');
+    if (!r.ok) {
+      if ([502, 503, 504].includes(r.status)) throw new Error('The demo backend may be waking up. Wait a moment, then try again.');
+      throw new Error(typeof data.detail === 'string' ? data.detail : 'Please check your inputs and try again.');
+    }
     return data;
   }, [token]);
   useEffect(() => {
     let active = true;
     async function initialize() {
       try {
-        const [c, settings] = await Promise.all([fetch('/api/catalog').then(r => r.json()), fetch('/api/config').then(r => r.json())]);
+        const [c, settings] = await Promise.all([backendFetch('/catalog').then(responseJson), backendFetch('/config').then(responseJson)]);
         let saved = sessionStorage.getItem('guard-session');
-        if (!saved) { const r = await fetch('/api/sessions', { method: 'POST' }); if (!r.ok) throw new Error(); saved = (await r.json()).token as string; sessionStorage.setItem('guard-session', saved); }
+        if (!saved) { const r = await backendFetch('/sessions', { method: 'POST' }); saved = (await responseJson(r)).token as string; sessionStorage.setItem('guard-session', saved); }
         if (active) { setCatalog(c); setConfig(settings); setToken(saved); setReady(true); }
-      } catch { if (active) setNotice('Cannot reach the backend. Start FastAPI, then reload this page.'); }
+      } catch (error) { if (active) setNotice(error instanceof Error ? error.message : 'The demo backend may be waking up. Wait a moment, then reload.'); }
     }
     void initialize(); return () => { active = false; };
   }, []);
