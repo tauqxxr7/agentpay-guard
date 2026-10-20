@@ -23,6 +23,7 @@ Apply migrations manually before the first Render deployment. For future schema 
 Create the service from `render.yaml` or manually with:
 
 - Runtime: Python
+- Python: `3.11.11`, pinned through both `PYTHON_VERSION` and `backend/.python-version`
 - Plan: Free
 - Root directory: `backend`
 - Build: `pip install -r requirements.txt`
@@ -35,6 +36,7 @@ The Blueprint intentionally has no Render database and no `preDeployCommand`. Se
 |---|---|
 | `DATABASE_URL` | Secret Neon pooled PostgreSQL URL with `sslmode=require` |
 | `APP_ENV` | `production` |
+| `PYTHON_VERSION` | `3.11.11`; keep aligned with `backend/.python-version` and CI |
 | `FRONTEND_ORIGIN` | Exact Vercel HTTPS origin; comma-separated exact origins only if Preview is required |
 | `ALLOWED_HOSTS` | Exact Render hostname and, if observed in proxied requests, the Vercel hostname; no schemes or paths |
 | `PAYMENTS_ENABLED` | `false` |
@@ -51,6 +53,8 @@ The Blueprint intentionally has no Render database and no `preDeployCommand`. Se
 | `TRUSTED_PROXY_CIDRS` | Empty until the actual immediate proxy CIDRs are verified |
 
 PayPal credentials and `PAYPAL_MERCHANT_ID` may remain unset while payments are disabled. Never configure live credentials. Production startup rejects missing `DATABASE_URL`, SQLite, and PostgreSQL URLs without TLS. `/ready` returns 503 unless the database is reachable and `alembic_version` is exactly the expected revision. `/health` stays independent of dependencies so Render can distinguish a live process from database readiness.
+
+The exact Python pin prevents Render from selecting its newer default runtime. `pydantic==2.10.4` resolves to `pydantic-core==2.27.2`, which publishes a CPython 3.11 manylinux x86-64 wheel; the Render build must download that wheel rather than invoke maturin/Rust. CI runs the backend suite on the same Python patch and a regression test requires all three pins to remain aligned.
 
 Render Free services spin down after inactivity, so the first request can be slow. The frontend waits up to 45 seconds and gives a retry message for 502/503/504 responses. Neon can also scale compute to zero; a simultaneous Render and Neon wake-up can add latency. Free tiers have usage, storage, retention, and support limits and should be treated as hackathon-demo infrastructure rather than durable production hosting.
 

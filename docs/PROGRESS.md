@@ -51,4 +51,9 @@ Synchronize the verified release documentation, then add PostgreSQL migrations a
 - Replaced the managed Render database and paid pre-deploy step with one Render Free service and a private operator-supplied Neon TLS URL.
 - Added production database/TLS/schema safeguards, hashed per-client quotas, safe expired-record cleanup, Host/Origin checks, and cold-start-aware frontend errors.
 - Kept `PAYMENTS_ENABLED=false` and `CAPTURE_ENABLED=false`; no deployment or provider transaction was performed.
+
+## Render runtime compatibility — 2026-10-20
+
+- Pinned Render, `backend/.python-version`, and CI to Python 3.11.11 after Render's Python 3.14 default attempted a source build of pydantic-core.
+- Confirmed the pinned pydantic-core release provides a CPython 3.11 Linux wheel; dependency versions and payment safeguards remain unchanged.
 - No PayPal order, capture, deployment or credential change occurred.

@@ -529,12 +529,15 @@ def test_production_unsafe_requests_require_expected_host_and_origin(client, mon
 
 
 def test_render_free_blueprint_keeps_payments_disabled():
-    blueprint = (Path(__file__).resolve().parents[2] / "render.yaml").read_text()
+    root = Path(__file__).resolve().parents[2]
+    blueprint = (root / "render.yaml").read_text()
     assert blueprint.count("type: web") == 1
     assert "plan: free" in blueprint
     assert "preDeployCommand" not in blueprint
     assert "databases:" not in blueprint
     assert "fromDatabase:" not in blueprint
     assert "--no-proxy-headers" in blueprint
+    assert "PYTHON_VERSION\n        value: 3.11.11" in blueprint
+    assert (root / "backend" / ".python-version").read_text().strip() == "3.11.11"
     assert "PAYMENTS_ENABLED\n        value: 'false'" in blueprint
     assert "CAPTURE_ENABLED\n        value: 'false'" in blueprint
