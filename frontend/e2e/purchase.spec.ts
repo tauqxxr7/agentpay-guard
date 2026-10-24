@@ -1,29 +1,39 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+const navigate = async (page: Page, name: string) => {
+  const menu = page.getByRole('button', { name: 'Open navigation' });
+  if (await menu.isVisible()) await menu.click();
+  await page.getByRole('button', { name, exact: true }).click();
+};
+const openStudio = async (page: Page) => {
+  await page.goto('/');
+  await navigate(page, 'Shopping studio');
+};
 test('proposal, approval, and audit flow without credentials', async ({ page }, testInfo) => {
   const response = await page.goto('/');
   const csp = response?.headers()['content-security-policy'] || '';
   expect(csp).toContain("default-src 'self'");
   expect(csp).toContain('https://www.paypal.com');
+  await page.getByRole('button', { name: 'Start a purchase' }).click();
   await page.getByRole('button', { name: 'Find my best fit' }).click();
   await expect(page.getByRole('heading', { name: 'Studio Keyboard' })).toBeVisible();
   await expect(page.getByText('deterministic fallback (non-AI)', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Approve $59.00 USD' }).click();
   await expect(page.getByText('Sandbox checkout is disabled', { exact: false })).toBeVisible();
   await page.getByText('View decision audit').click();
-  await expect(page.getByText('HUMAN_APPROVED', { exact: false })).toBeVisible();
+  await expect(page.getByText('Human approved', { exact: true })).toBeVisible();
   await expect(page.locator('body')).not.toContainText(/\u00c2|\u00e2/);
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: `../docs/screenshots/workspace-${testInfo.project.name}.png`, fullPage: true });
-  await page.getByRole('button', { name: 'History', exact: true }).click();
-  await expect(page.getByText('No PayPal order created')).toBeVisible();
+  await navigate(page, 'Audit & history');
+  await expect(page.getByText('Not created')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
 });
 test('budget rejection and catalog comparison', async ({ page }) => {
-  await page.goto('/');
+  await openStudio(page);
   await page.getByLabel('Maximum total (USD)').fill('20');
   await page.getByRole('button', { name: 'Find my best fit' }).click();
   await expect(page.getByRole('status')).toContainText('No matching item');
-  await page.getByRole('button', { name: 'Catalog', exact: true }).click();
+  await navigate(page, 'Catalog');
   await expect(page.getByRole('heading', { name: 'Compact Keyboard' })).toBeVisible();
   await expect(page.getByText('$35.00', { exact: true })).toBeVisible();
 });
@@ -38,7 +48,7 @@ test('checkout buyer approval stays separate from capture with an explicitly moc
   await page.route('**/api/proposals/*/order', route => { orders++; return route.fulfill({ json: { id: 'MOCK-ORDER' } }); });
   await page.route('**/api/proposals/*/buyer-approval', route => route.fulfill({ json: { ...latestProposal!, state: 'BUYER_APPROVED', order_id: 'MOCK-ORDER' } }));
   await page.route('**/api/proposals/*/capture', route => { captures++; return route.fulfill({ status: 500 }); });
-  await page.goto('/');
+  await openStudio(page);
   await page.getByRole('button', { name: 'Find my best fit' }).click();
   await expect(page.getByRole('button', { name: 'Approve $59.00 USD' })).toBeVisible();
   expect(orders).toBe(0);
@@ -55,7 +65,7 @@ test('order transport failure is identified before buyer checkout', async ({ pag
   await page.route('**/api/config', route => route.fulfill({ json: { payments_enabled: true, capture_enabled: false, client_id: 'test-fixture' } }));
   await page.route('https://www.paypal.com/sdk/js?*', route => route.fulfill({ contentType: 'application/javascript', body: `window.paypal = { Buttons(options) { return { async render(target) { const b = document.createElement('button'); b.textContent = 'PayPal SDK fixture'; b.onclick = async () => { try { await options.createOrder(); } catch { options.onError(); } }; target.append(b); }, async close() {} }; } };` }));
   await page.route('**/api/proposals/*/order', route => route.fulfill({ status: 502, json: { detail: 'PayPal sandbox could not be reached. No success was assumed.' } }));
-  await page.goto('/');
+  await openStudio(page);
   await page.getByRole('button', { name: 'Find my best fit' }).click();
   await page.getByRole('button', { name: 'Approve $59.00 USD' }).click();
   await page.getByRole('button', { name: 'PayPal SDK fixture' }).click();
@@ -64,7 +74,7 @@ test('order transport failure is identified before buyer checkout', async ({ pag
 
 test('Render cold-start response is actionable and does not imply success', async ({ page }) => {
   await page.route('**/api/catalog', route => route.fulfill({ status: 503, json: { detail: 'Database is unavailable' } }));
-  await page.goto('/');
+  await openStudio(page);
   await expect(page.getByRole('status')).toContainText('backend may be waking up');
   await expect(page.getByRole('button', { name: 'Find my best fit' })).toBeDisabled();
   await expect(page.locator('body')).not.toContainText('Payment completed');
@@ -83,12 +93,42 @@ test('owned persisted order is explicitly resumed without creating a replacement
   await page.route('**/api/proposals/PROPOSAL-1/order', route => { creates++; return route.fulfill({ status: 500 }); });
   await page.route('https://www.paypal.com/sdk/js?*', route => route.fulfill({ contentType: 'application/javascript', body: `window.paypal = { Buttons(options) { return { async render(target) { const b = document.createElement('button'); b.textContent = 'Resume existing PayPal order'; b.onclick = () => options.createOrder(); target.append(b); }, async close() {} }; } };` }));
   await page.goto('/');
-  await page.getByRole('button', { name: 'History', exact: true }).click();
-  await expect(page.getByText('3S88-EXISTING-000W')).toBeVisible();
+  await navigate(page, 'Audit & history');
+  await expect(page.getByText('3S88…000W')).toBeVisible();
   await page.getByRole('button', { name: 'Resume Checkout' }).click();
   await expect(page.getByText('Resuming existing Sandbox order')).toBeVisible();
-  await expect(page.getByText('3S88-EXISTING-000W', { exact: true })).toBeVisible();
+  await expect(page.getByText('3S88…000W', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Resume existing PayPal order' }).click();
   await expect.poll(() => resumes).toBe(2);
   expect(creates).toBe(0);
+});
+
+test('command center and all product views are keyboard-accessible', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: /Spend with intelligence/ })).toBeVisible();
+  await navigate(page, 'Catalog');
+  await expect(page.getByRole('heading', { name: 'Grounded by design.' })).toBeVisible();
+  await navigate(page, 'Demo guide');
+  await expect(page.getByRole('heading', { name: /See what the agent decides/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Begin guided demo' }).click();
+  await expect(page.getByRole('heading', { name: /Describe the outcome/ })).toBeVisible();
+  await expect(page.locator('body')).not.toContainText(/Payment completed/);
+});
+
+test('policy decision center exposes only backend-returned checks', async ({ page }) => {
+  await openStudio(page);
+  await page.getByRole('button', { name: 'Find my best fit' }).click();
+  await expect(page.getByText('Policy decision center')).toBeVisible();
+  for (const label of ['Valid sku', 'Approved merchant', 'Allowed category', 'Available', 'Within budget', 'Price unchanged']) {
+    await expect(page.getByText(label, { exact: true })).toBeVisible();
+  }
+  await expect(page.getByText('6/6 PASSED')).toBeVisible();
+});
+
+test('reduced motion preference preserves a functional workflow', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openStudio(page);
+  await page.getByRole('button', { name: 'Find my best fit' }).click();
+  await expect(page.getByRole('heading', { name: 'Studio Keyboard' })).toBeVisible();
+  expect(await page.evaluate(() => Number.parseFloat(getComputedStyle(document.querySelector('.reveal')!).animationDuration))).toBeLessThan(0.001);
 });
