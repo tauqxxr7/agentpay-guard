@@ -14,7 +14,7 @@ AgentPay Guard interprets a purchasing request, recommends from a controlled dem
 
 ## How it is built
 
-Next.js, TypeScript and Tailwind provide the responsive interface. FastAPI, Pydantic and SQLAlchemy own validation, sessions and local SQLite persistence. A hosted Gemini adapter uses native Pydantic structured output for a constrained SKU selection; deterministic server code checks budget, merchant, category, availability and price. PayPal Orders API and the official JavaScript checkout handle buyer approval. The backend verifies approval directly with PayPal before changing application state. Capture remains separately disabled and unverified.
+Next.js, TypeScript and Tailwind provide the responsive interface. FastAPI, Pydantic and SQLAlchemy own validation, sessions and PostgreSQL/SQLite persistence. A hosted Gemini adapter uses native Pydantic structured output for a constrained SKU selection; deterministic server code checks budget, merchant, category, availability and price. PayPal Orders API and the official JavaScript checkout handle buyer approval. The backend verifies approval directly with PayPal before changing application state. Capture remains separately disabled and unverified.
 
 ## What makes it different
 
@@ -26,7 +26,7 @@ Payment callbacks are not authoritative receipts. Idempotent requests and server
 
 ## Evidence and limitations
 
-One genuine Gemini request returned schema-valid grounded output; later hosted cases received 429/503 responses. One genuine USD 59.00 PayPal Sandbox order reached `APPROVED` and the backend reached `BUYER_APPROVED` after server verification. Zero captures occurred. PostgreSQL and public deployment are not verified. Catalog inventory is fictional; no live payments or goods are fulfilled.
+One genuine Gemini request returned schema-valid grounded output; later hosted cases received 429/503 responses. One genuine USD 59.00 PayPal Sandbox order reached `APPROVED` and the backend reached `BUYER_APPROVED` after server verification. Zero captures occurred. Neon connectivity and the expected schema revision are verified, but the hosted proposal flow is currently blocked by an exact-origin configuration mismatch. Catalog inventory is fictional; no live payments or goods are fulfilled.
 
 ## Submission checklist
 
@@ -35,10 +35,10 @@ One genuine Gemini request returned schema-valid grounded output; later hosted c
 - [x] Verify genuine PayPal Sandbox buyer approval.
 - [ ] Keep capture described as unverified unless a separately authorized test occurs.
 - [x] Publish public repository with MIT license, source, assets and setup.
-- [ ] Verify judge access to reproducible build or actual hosted demo.
-- [ ] Capture actual UI screenshots.
+- [ ] Verify judge access to the complete hosted workflow after correcting Render's exact origin.
+- [x] Capture actual production UI screenshots.
 - [ ] Record, authorize upload and verify public YouTube video shorter than three minutes.
 - [ ] Enter actual repository/video/demo links and technologies in Devpost.
 - [ ] Review all claims and submit before November 13, 2026, 01:30 IST.
 
-Repository URL: https://github.com/tauqxxr7/agentpay-guard. Demo URL: not deployed. YouTube URL: not recorded/uploaded. Do not submit placeholders.
+Repository URL: https://github.com/tauqxxr7/agentpay-guard. Demo URL: https://agentpay-guard-nine.vercel.app (public shell and read-only readiness verified; proposal flow currently blocked by origin configuration). YouTube URL: not recorded/uploaded. Do not submit placeholders.

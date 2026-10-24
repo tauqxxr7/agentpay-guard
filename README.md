@@ -4,7 +4,7 @@ AI-powered purchasing with verifiable decisions, policy-controlled spending, and
 
 An assistant can suggest a purchase; it should not silently spend your money. AgentPay Guard turns a request into a catalog-grounded proposal, checks deterministic policies, records your approval, and initiates PayPal sandbox checkout.
 
-**Status:** one genuine hosted Gemini request and one genuine PayPal Sandbox buyer approval are verified. The approved order was USD 59.00 and reached `BUYER_APPROVED` only after a server-side PayPal lookup. No capture occurred and `CAPTURE_ENABLED=false`. SQLite and a disposable local PostgreSQL 17.11 instance are verified; managed hosted PostgreSQL and public deployment are not. Fictional inventory, no fulfillment, sandbox only.
+**Status:** one genuine hosted Gemini request and one genuine PayPal Sandbox buyer approval are verified. The approved order was USD 59.00 and reached `BUYER_APPROVED` only after a server-side PayPal lookup. No capture occurred and `CAPTURE_ENABLED=false`. The public Vercel/Render deployment and Neon schema revision are reachable, but the hosted proposal flow is currently blocked by a mismatched Render `FRONTEND_ORIGIN` value. Fictional inventory, no fulfillment, sandbox only.
 
 ## Features
 
@@ -56,7 +56,13 @@ Browser tests start the backend using `python`; activate the virtual environment
 
 ## Architecture and trust
 
-Actual local UI (non-AI fallback; sandbox checkout disabled):
+Actual production UI (captured October 24, 2026; the visible origin warning is a known hosted configuration blocker):
+
+![AgentPay Guard production command center](docs/screenshots/production-command-center-desktop.png)
+
+[Production mobile screenshot](docs/screenshots/production-command-center-mobile.png)
+
+Actual local workflow UI (non-AI fallback; sandbox checkout disabled):
 
 ![AgentPay Guard desktop workspace](docs/screenshots/workspace-desktop.png)
 
@@ -77,7 +83,7 @@ flowchart LR
 
 Stack: Next.js, React, TypeScript, Tailwind, FastAPI, Pydantic, SQLAlchemy, PostgreSQL/SQLite, pytest, Playwright, PayPal Orders/JavaScript SDK and the Google Gen AI SDK.
 
-Gemini failures use a deterministic fallback whose mode is visibly labelled `non-AI`; fallback output is never reported as hosted inference. The model cannot call payment tools. Client callbacks cannot mark an order approved or paid. No live PayPal endpoint is configurable. Capture code exists but has not been exercised against PayPal. Disposable PostgreSQL 17.11 passed migration and persistence verification; Neon and the public deployment remain unverified. This is a hackathon build, not production-certified financial infrastructure.
+Gemini failures use a deterministic fallback whose mode is visibly labelled `non-AI`; fallback output is never reported as hosted inference. The model cannot call payment tools. Client callbacks cannot mark an order approved or paid. No live PayPal endpoint is configurable. Capture code exists but has not been exercised against PayPal. Disposable PostgreSQL 17.11 passed migration and persistence verification; Neon is reachable at schema revision `20261018_0001`. Hosted proposal persistence and restart recovery remain unverified until the exact-origin configuration blocker is corrected. This is a hackathon build, not production-certified financial infrastructure.
 
 Read [feasibility](docs/FEASIBILITY.md), [architecture](docs/ARCHITECTURE.md), [database migrations](docs/DATABASE.md), [security](docs/SECURITY.md), [limitations](docs/KNOWN_LIMITATIONS.md), [deployment](docs/DEPLOYMENT.md), [progress](docs/PROGRESS.md), and [blockers](docs/BLOCKERS.md).
 

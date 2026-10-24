@@ -1,12 +1,12 @@
-# Evaluation — updated October 18, 2026
+# Evaluation — updated October 24, 2026
 
 ## Measured local results
 
 | Check | Result | Scope |
 |---|---|---|
-| pytest | 100 passed, 1 skipped | Local SQLite, deterministic logic and mocked provider responses; opt-in credential test skipped |
+| pytest | 114 passed, 2 skipped | Local SQLite, deterministic logic and mocked provider responses; opt-in external tests skipped |
 | Synthetic evaluation | 60 / 60 passed | Ten request families × six budget boundaries; included in pytest total |
-| Playwright | 10 passed | Desktop and mobile-emulated Chrome flows |
+| Playwright | 18 passed | Desktop and mobile-emulated Chrome flows; production quotas are not changed by the CI harness |
 | ESLint | Passed | Frontend source |
 | TypeScript | Passed | Strict compilation |
 | Next.js production build | Passed | Local build only |
@@ -18,7 +18,7 @@
 | Genuine sandbox capture | Not run | Zero capture calls; `CAPTURE_ENABLED=false` |
 | Genuine hosted AI | Partial pass | One structured request succeeded; broader hosted suite hit provider availability/quota limits |
 | PostgreSQL | Passed locally | Disposable PostgreSQL 17.11; migrations, restart persistence, ownership and mocked idempotency |
-| Hosted deployment | Not run | No public application URL exists |
+| Hosted deployment | Partial | Vercel shell, Render health, Vercel proxy, Neon connectivity and revision pass; unsafe requests receive HTTP 403 because the deployed exact origin does not match |
 
 Synthetic scenarios cover affordable and unaffordable products, wireless/quiet/noise-cancelling preferences, unsupported requests and unsafe payment-tool instructions. Expected outputs are independently specified in the parameter table. This is a small deterministic evaluation, **not an LLM accuracy benchmark**. No claim of general prompt-injection robustness or live AI success follows from it.
 

@@ -10,11 +10,12 @@
 - [x] Genuine PayPal sandbox buyer approval independently verified.
 - [ ] Genuine PayPal sandbox capture independently verified; zero captures occurred.
 - [x] Disposable PostgreSQL migration, persistence, ownership and idempotency verified.
-- [ ] Managed PostgreSQL, backups and public-deployment hardening verified.
+- [x] Hosted Neon connectivity and expected Alembic revision verified.
+- [ ] Hosted backup/restore and restart recovery verified.
 - [x] Public repository and visible license verified remotely.
 - [ ] Fresh-machine reproducible setup independently verified.
-- [ ] Public hosted demo, if selected, verified in browser.
+- [ ] Complete public hosted workflow verified in browser; the shell loads, but session creation currently receives HTTP 403 from the exact-origin boundary.
 - [ ] Public YouTube video below three minutes verified.
 - [ ] Complete Devpost submission verified.
 
-**Release decision: NOT READY for final submission.** The hosted AI sample and Sandbox buyer approval are genuine integration evidence. PostgreSQL, public deployment, video and final submission remain incomplete; this is not production certification.
+**Release decision: NOT READY for final submission.** The hosted AI sample and Sandbox buyer approval are genuine integration evidence. Vercel, Render health and Neon readiness are live, but the hosted workflow is blocked by exact-origin configuration. Video and final submission also remain incomplete; this is not production certification.

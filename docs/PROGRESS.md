@@ -57,3 +57,9 @@ Synchronize the verified release documentation, then add PostgreSQL migrations a
 - Pinned Render, `backend/.python-version`, and CI to Python 3.11.11 after Render's Python 3.14 default attempted a source build of pydantic-core.
 - Confirmed the pinned pydantic-core release provides a CPython 3.11 Linux wheel; dependency versions and payment safeguards remain unchanged.
 - No PayPal order, capture, deployment or credential change occurred.
+
+## Production release verification — 2026-10-24
+
+- Published the premium redesign and a CI-only Playwright quota-isolation fix; GitHub Actions passed 114 backend tests with 2 opt-in skips, Ruff, Alembic checks, ESLint, TypeScript, the Next.js build, and 18 Playwright tests.
+- Verified HTTP 200 from Render and Vercel-proxied `/health` and `/ready`; Neon reports PostgreSQL revision `20261018_0001`. Public payment creation and capture both remain disabled.
+- Captured the deployed Command Center at desktop and mobile sizes. The deployed backend rejects the correct Vercel origin on `POST /sessions` with HTTP 403, so hosted proposal, Gemini, ownership and persistence verification remain blocked pending a Render environment correction and restart.

@@ -7,6 +7,6 @@
 - No webhook ingestion; pending transactions require manual status refresh. No durable background reconciliation.
 - Anonymous per-tab sessions expire after 24 hours. No login, recovery or cross-device history.
 - Session issuance and Gemini usage have shared database quotas across workers plus hashed per-client buckets. Accurate client-IP grouping requires verified trusted-proxy CIDRs; Vercel Firewall cannot protect direct Render requests.
-- PostgreSQL 17.11 passed the disposable Alembic, restart, ownership and idempotency test. Hosted PostgreSQL and managed backup/restore remain unverified until deployment.
+- PostgreSQL 17.11 passed the disposable Alembic, restart, ownership and idempotency test. Neon connectivity and revision `20261018_0001` are hosted-verified; managed backup/restore and restart recovery are not.
 - Capture IDs/receipts are absent because no capture occurred. External audit integrity needs expansion; UI history presently shows verified state and order ID.
-- The public repository exists. No public deployment, recorded video or Devpost submission is verified.
+- The public repository and deployment exist. The frontend and read-only health/readiness routes are reachable, but hosted session creation is blocked by Render's deployed exact-origin configuration. No recorded video or Devpost submission is verified.
