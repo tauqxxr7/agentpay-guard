@@ -115,6 +115,29 @@ test('command center and all product views are keyboard-accessible', async ({ pa
   await expect(page.locator('body')).not.toContainText(/Payment completed/);
 });
 
+test('command center hero stays within narrow and desktop viewports', async ({ page }, testInfo) => {
+  for (const width of [320, 375, 390, 430, 1440]) {
+    await page.setViewportSize({ width, height: width < 760 ? 844 : 1000 });
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: /Spend with intelligence/ })).toBeVisible();
+    const bounds = await page.locator('.command-hero').evaluate(hero => {
+      const heroRect = hero.getBoundingClientRect();
+      const descendants = Array.from(hero.querySelectorAll<HTMLElement>('h1, p, button, .signal-card'));
+      return {
+        documentFits: document.documentElement.scrollWidth <= window.innerWidth,
+        descendantsFit: descendants.every(element => {
+          const rect = element.getBoundingClientRect();
+          return rect.left >= heroRect.left - 1 && rect.right <= heroRect.right + 1;
+        }),
+      };
+    });
+    expect(bounds, `hero overflow at ${width}px`).toEqual({ documentFits: true, descendantsFit: true });
+    if (testInfo.project.name === 'desktop') {
+      await page.screenshot({ path: `../docs/screenshots/command-center-${width}px.png`, fullPage: true });
+    }
+  }
+});
+
 test('policy decision center exposes only backend-returned checks', async ({ page }) => {
   await openStudio(page);
   await page.getByRole('button', { name: 'Find my best fit' }).click();
