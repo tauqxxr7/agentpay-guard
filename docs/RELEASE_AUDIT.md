@@ -14,8 +14,8 @@
 - [ ] Hosted backup/restore and restart recovery verified.
 - [x] Public repository and visible license verified remotely.
 - [ ] Fresh-machine reproducible setup independently verified.
-- [ ] Complete public hosted workflow verified in browser; exact-origin session creation now passes, but a hosted proposal request timed out after 65 seconds before approval/history could be checked.
+- [x] Public non-payment workflow verified through the Vercel proxy: session, proposal, six policies, approval, owner-scoped history and refresh passed. Browser interaction on the new deployment remains to be independently checked.
 - [ ] Public YouTube video below three minutes verified.
 - [ ] Complete Devpost submission verified.
 
-**Release decision: NOT READY for final submission.** The hosted AI sample and Sandbox buyer approval are genuine integration evidence. Vercel, Render health, Neon readiness, and session creation are live. The proposal timeout fix requires deployment and a hosted retest. Video and Devpost submission remain incomplete; this is not production certification.
+**Release decision: READY FOR MANUAL BROWSER RECORDING CHECK, NOT YET SUBMITTED.** The public non-payment API workflow, 20 CI browser tests, prior hosted Gemini sample, and prior Sandbox buyer approval have genuine evidence. The current hosted response used a labelled non-AI fallback. Hosted browser interaction could not be independently checked because the browser access host was unavailable. A public YouTube video, entrant eligibility review, and Devpost submission remain; this is not production certification.

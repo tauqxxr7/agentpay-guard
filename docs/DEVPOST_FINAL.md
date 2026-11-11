@@ -38,7 +38,7 @@ Next.js 16, React 19, TypeScript, Tailwind CSS 4, Python 3.11, FastAPI, Pydantic
 
 ## Judge testing
 
-1. Open [the hosted demo](https://agentpay-guard-nine.vercel.app). Allow a sleeping free-tier backend to wake. Recheck the complete hosted proposal flow before advertising it as functional; use the reproducible local setup if the timeout remains.
+1. Open [the hosted demo](https://agentpay-guard-nine.vercel.app). Allow a sleeping free-tier backend to wake. The complete non-payment proposal, approval, and owner-history flow passed a hosted check on November 11; recheck it immediately before recording.
 2. Request a quiet wireless keyboard with a USD 80 budget and quantity 1. Inspect the mode label. `Gemini` means a hosted response was received; `deterministic fallback (non-AI; …)` means it was not.
 3. Review the catalog-backed USD 59 price and six checks, explicitly approve, then open History for the audit. Public PayPal checkout remains disabled.
 4. To reproduce locally, use the commands in the [README](../README.md). Sandbox buyer checkout requires separately configured developer credentials; do not use live credentials.

@@ -8,7 +8,7 @@ AgentPay Guard turns a plain-language request into a catalog-grounded purchase p
 
 [Try the public demo](https://agentpay-guard-nine.vercel.app) · [GitHub Actions](https://github.com/tauqxxr7/agentpay-guard/actions/workflows/ci.yml) · [Three-minute walkthrough](docs/DEMO_SCRIPT.md) · [MIT license](LICENSE)
 
-> **Demo scope:** Catalog browsing and session creation are hosted-verified. The latest hosted proposal attempt timed out; the bounded Gemini retry fix awaits deployment and a fresh end-to-end check. Recommendation, policy, approval, and history pass local tests, but their hosted status is **not yet verified**. Checkout is disabled (`PAYMENTS_ENABLED=false`, `CAPTURE_ENABLED=false`). Successful Gemini inference is labelled as Gemini; provider failures use a labelled deterministic **non-AI** fallback.
+> **Demo scope:** The hosted catalog, session, proposal, six policy checks, explicit approval, owner-scoped history, and refresh persistence were verified on November 11. That run used the clearly labelled deterministic **non-AI** fallback after Gemini was unavailable; it does not prove current hosted Gemini inference. Checkout remains disabled (`PAYMENTS_ENABLED=false`, `CAPTURE_ENABLED=false`). Free-tier cold starts can add delay.
 
 ## Why it matters
 

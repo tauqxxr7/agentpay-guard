@@ -1,6 +1,7 @@
 """Opt-in, non-payment hosted smoke test. Never print session credentials."""
 
 import os
+import re
 import sys
 
 import httpx
@@ -19,7 +20,12 @@ def call(client, method, path, *, token=None, payload=None):
     response = client.request(
         method, BASE + "/api" + path, headers=headers, json=payload
     )
-    print(f"{method} {path.split('?')[0]} HTTP {response.status_code}")
+    safe_path = re.sub(r"/proposals/[^/]+", "/proposals/[redacted]", path.split("?")[0])
+    print(
+        f"{method} {safe_path} HTTP {response.status_code} "
+        f"elapsed_ms={round(response.elapsed.total_seconds() * 1000)} "
+        f"content_type={response.headers.get('content-type', '').split(';')[0]}"
+    )
     if response.status_code >= 400:
         raise RuntimeError("hosted smoke test stopped")
     return response.json()
@@ -54,8 +60,8 @@ def main():
                     "quantity": 1,
                 },
             )
-        except httpx.TimeoutException:
-            print("POST /proposals timed out; checking owner history without retry")
+        except (httpx.TimeoutException, RuntimeError):
+            print("POST /proposals failed; checking owner history without retry")
             history_after_timeout = call(client, "GET", "/transactions", token=session)
             print("persisted_proposals_after_timeout:", len(history_after_timeout))
             raise
