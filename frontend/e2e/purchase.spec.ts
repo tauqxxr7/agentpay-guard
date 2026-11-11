@@ -116,7 +116,7 @@ test('command center and all product views are keyboard-accessible', async ({ pa
 });
 
 test('command center hero stays within narrow and desktop viewports', async ({ page }, testInfo) => {
-  for (const width of [320, 375, 390, 430, 1440]) {
+  for (const width of [320, 375, 390, 430, 768, 1440]) {
     await page.setViewportSize({ width, height: width < 760 ? 844 : 1000 });
     await page.goto('/');
     await expect(page.getByRole('heading', { name: /Spend with intelligence/ })).toBeVisible();

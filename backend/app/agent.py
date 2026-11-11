@@ -92,9 +92,10 @@ class GeminiProvider:
         client = genai.Client(
             api_key=self.api_key,
             http_options=types.HttpOptions(
-                timeout=25_000,
+                # Keep the worst-case provider wait below the browser's 45s deadline.
+                timeout=10_000,
                 retry_options=types.HttpRetryOptions(
-                    attempts=3,
+                    attempts=2,
                     initial_delay=0.5,
                     max_delay=2.0,
                     exp_base=2.0,

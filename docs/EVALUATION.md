@@ -1,4 +1,10 @@
-# Evaluation — updated October 24, 2026
+# Evaluation — updated November 11, 2026
+
+## November 11 release check
+
+The current local backend suite passed **114 tests**, with **2 opt-in external tests skipped**. Ruff, ESLint, TypeScript, Next.js production build, and SQLite Alembic drift check passed. `npm audit --omit=dev --audit-level=high` reported zero vulnerabilities. A local Playwright rerun could not complete because the Windows host failed to load the Next.js SWC binary under paging-file pressure and then crashed browser workers out of memory; this is an execution-environment failure, not a browser test pass. CI must rerun the 20 browser cases, including the added 768 px viewport assertion.
+
+Hosted Render `/health` and `/ready`, Vercel `/api/ready`, `/api/config`, exact-origin `/api/sessions`, and `/api/catalog` returned HTTP 200. `/ready` reported PostgreSQL schema `20261018_0001`; `/config` reported payment creation and capture disabled. A hosted `/api/proposals` request timed out after 65 seconds, so no hosted proposal, Gemini response, approval, or history result was claimed from that attempt. The deployed Gemini retry budget could exceed the browser's 45-second timeout; the local adapter now bounds attempts and per-attempt duration. A post-deployment hosted retest is required.
 
 ## Measured local results
 
@@ -18,7 +24,7 @@
 | Genuine sandbox capture | Not run | Zero capture calls; `CAPTURE_ENABLED=false` |
 | Genuine hosted AI | Partial pass | One structured request succeeded; broader hosted suite hit provider availability/quota limits |
 | PostgreSQL | Passed locally | Disposable PostgreSQL 17.11; migrations, restart persistence, ownership and mocked idempotency |
-| Hosted deployment | Partial | Vercel shell, Render health, Vercel proxy, Neon connectivity and revision pass; unsafe requests receive HTTP 403 because the deployed exact origin does not match |
+| Hosted deployment | Partial | Vercel proxy, Render health, Neon revision and exact-origin session creation pass; a November 11 proposal attempt timed out after 65 seconds, so full hosted workflow remains unverified |
 
 Synthetic scenarios cover affordable and unaffordable products, wireless/quiet/noise-cancelling preferences, unsupported requests and unsafe payment-tool instructions. Expected outputs are independently specified in the parameter table. This is a small deterministic evaluation, **not an LLM accuracy benchmark**. No claim of general prompt-injection robustness or live AI success follows from it.
 

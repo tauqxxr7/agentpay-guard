@@ -62,4 +62,4 @@ Synchronize the verified release documentation, then add PostgreSQL migrations a
 
 - Published the premium redesign and a CI-only Playwright quota-isolation fix; GitHub Actions passed 114 backend tests with 2 opt-in skips, Ruff, Alembic checks, ESLint, TypeScript, the Next.js build, and 18 Playwright tests.
 - Verified HTTP 200 from Render and Vercel-proxied `/health` and `/ready`; Neon reports PostgreSQL revision `20261018_0001`. Public payment creation and capture both remain disabled.
-- Captured the deployed Command Center at desktop and mobile sizes. The deployed backend rejects the correct Vercel origin on `POST /sessions` with HTTP 403, so hosted proposal, Gemini, ownership and persistence verification remain blocked pending a Render environment correction and restart.
+- Captured the deployed Command Center at desktop and mobile sizes. On November 11, exact-origin `POST /api/sessions` returned HTTP 200 and `/ready` confirmed Neon schema `20261018_0001`. A hosted proposal attempt timed out after 65 seconds. The local Gemini retry budget has been shortened, pending CI, deployment and hosted retest.

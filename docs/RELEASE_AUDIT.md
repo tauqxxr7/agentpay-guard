@@ -14,8 +14,8 @@
 - [ ] Hosted backup/restore and restart recovery verified.
 - [x] Public repository and visible license verified remotely.
 - [ ] Fresh-machine reproducible setup independently verified.
-- [ ] Complete public hosted workflow verified in browser; the shell loads, but session creation currently receives HTTP 403 from the exact-origin boundary.
+- [ ] Complete public hosted workflow verified in browser; exact-origin session creation now passes, but a hosted proposal request timed out after 65 seconds before approval/history could be checked.
 - [ ] Public YouTube video below three minutes verified.
 - [ ] Complete Devpost submission verified.
 
-**Release decision: NOT READY for final submission.** The hosted AI sample and Sandbox buyer approval are genuine integration evidence. Vercel, Render health and Neon readiness are live, but the hosted workflow is blocked by exact-origin configuration. Video and final submission also remain incomplete; this is not production certification.
+**Release decision: NOT READY for final submission.** The hosted AI sample and Sandbox buyer approval are genuine integration evidence. Vercel, Render health, Neon readiness, and session creation are live. The proposal timeout fix requires deployment and a hosted retest. Video and Devpost submission remain incomplete; this is not production certification.

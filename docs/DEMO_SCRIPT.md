@@ -1,26 +1,26 @@
-# Demo recording plan — target 2:55, not recorded
+# AgentPay Guard demo — target 2:55
 
-Use the narration below only after the features shown have been genuinely verified. If AI or PayPal is unavailable, label the fallback and describe payment as unverified; do not present fixtures as live success.
+**Recording status:** Not recorded or uploaded. Rehearse using the actual hosted app. Do not present a fallback as Gemini or a buyer-approved order as paid.
 
-| Time | Screen | Narration |
+| Time | Screen and action | Narration |
 |---|---|---|
-| 0:00–0:20 | Workspace title and request | “AI can help choose what to buy. But a recommendation should never silently become a payment. AgentPay Guard gives small teams a clear boundary between an assistant's suggestion and a person's authority to spend.” |
-| 0:20–0:45 | Request, budget, quantity | “Describe what you need and set a binding budget. I need a quiet wireless keyboard for my home office, with an eighty-dollar maximum. This demonstration uses a controlled fictional catalog and PayPal sandbox. No real goods or money are involved.” |
-| 0:45–1:15 | Generate proposal; show hosted AI label | “The model selects a catalog product. The server supplies its real catalog attributes and price, then checks the SKU, merchant, category, availability and budget. Here is the exact item, total and reason for the recommendation. The model has no payment tools.” |
-| 1:15–1:40 | Budget $20 rejection, then restore $80 | “Let's lower the budget to twenty dollars. There is no eligible match, so the assistant asks us to adjust the request. It cannot invent a cheaper price or override the spending policy. Restoring the budget produces a proposal I can review.” |
-| 1:40–2:20 | Explicit proposal approval and disabled checkout boundary | “I approve this exact product and amount. That records human intent; it is not a payment. Public order creation and capture are intentionally disabled. Separately, our genuine Sandbox evidence verified one buyer-approved 59-dollar order through a server-side PayPal lookup. It was never captured or presented as paid.” |
-| 2:20–2:45 | History and audit | “The audit separates recommendation, policy checks and human approval. Each record belongs to this browser session. If Gemini fails, the interface explicitly labels the deterministic fallback as non-AI. Payment stages remain visibly distinct and locked in the public demo.” |
-| 2:45–2:55 | Workspace closing | “AgentPay Guard makes assisted purchasing explainable and deliberate. AI proposes. Policy checks. You approve.” |
+| 0:00–0:20 | Command center | “AI can help us choose what to buy, but it should never silently spend. AgentPay Guard separates a recommendation from policy checks and human authorization.” |
+| 0:20–0:50 | Studio request | “I'll request a quiet wireless keyboard for my desk, set an eighty-dollar budget, and choose quantity one. This uses a fictional demo catalog.” |
+| 0:50–1:20 | Result and mode | “The assistant recommends a catalog SKU. The backend supplies the actual catalog price and attributes. Here the Studio Keyboard is fifty-nine dollars. The mode label tells us whether Gemini answered or a deterministic non-AI fallback was used.” |
+| 1:20–1:50 | Policy panel | “Six server-side checks cover SKU, merchant, category, stock, budget, and unchanged price. The model cannot change the price or call a payment tool.” |
+| 1:50–2:10 | Approval | “I approve this exact proposal. This records my decision; it does not create or capture a payment in the public demo.” |
+| 2:10–2:30 | History and audit | “History shows the proposal and human approval as separate events. Another browser session cannot read this one’s records.” |
+| 2:30–2:45 | Documentation or redacted prior evidence | “Separately, a genuine PayPal Sandbox buyer approved a fifty-nine-dollar order. The server verified PayPal's APPROVED state. No capture occurred; public checkout is disabled.” |
+| 2:45–2:55 | Architecture | “The boundary is simple: AI proposes, deterministic policy checks, and a person approves.” |
 
-## Browser preparation
+## Before recording
 
-- Verify the hosted proposal workflow and displayed AI mode before recording. Refer to the genuine prior Sandbox approval as prior evidence; do not imply the public demo created that order, and do not include secrets or account email in footage.
-- Use a clean browser profile, 1440×1000 viewport and readable zoom. Close unrelated tabs and notifications.
-- Preload the app, confirm backend connectivity and sandbox buyer access; never show developer credential pages.
-- Rehearse the exact script with a timer. Aim below 2:55; shorten pauses before cutting material facts.
-- Record the actual flow, including any truthful pending state. Do not splice an unverified success into a failed checkout.
-- Obtain authorization before public YouTube upload. Verify public visibility and final duration.
+1. Confirm [hosted readiness](https://agentpay-guard-api.onrender.com/ready) and that the public session/proposal/approval/history path currently works. Allow free-tier cold starts. If it fails, record a clearly labelled local run instead.
+2. Inspect the provider label on the actual result. Say “Gemini” only if it says `Gemini`; otherwise explain the labelled non-AI fallback. Do not splice in a prior Gemini response as a current hosted result.
+3. Use a clean browser profile at about 1440 px width, hide notifications and account details, and prepare the exact request. Do not display tokens, credentials, dashboard secrets, or buyer information.
+4. For PayPal, show only redacted, previously verified evidence or a real prior recording clearly identified as such. Do not suggest an uncaptured order is paid.
+5. Rehearse to under three minutes. Record the functioning app, verify video duration, upload publicly to YouTube, and add its actual link to [the Devpost draft](DEVPOST_FINAL.md).
 
-## Backup
+## Honest backup
 
-If AI is unavailable, demonstrate the labelled non-AI fallback and disclose the limitation. If PayPal fails, show proposal/policy/audit and explain the checkout blocker. Use a previously recorded genuine sandbox run only if identified as a prior recording. Mocked automated tests demonstrate code paths, not successful integration.
+If hosted Gemini is unavailable, show the labelled deterministic fallback and say the prior genuine Gemini test is separate. If the hosted proposal path is unavailable, run the documented local setup and explicitly identify it as local. Never recreate a Sandbox approval with mock data or imply that Playwright's mocked PayPal callbacks are a real transaction.

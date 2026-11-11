@@ -110,8 +110,10 @@ def test_provider_failures_use_labeled_fallback(error):
     intent, mode = recommend("wireless keyboard", 8000, 1)
     assert intent.sku == "KEY-01"
     assert mode == "deterministic fallback (non-AI; Gemini unavailable)"
-    retries = FakeClient.init_kwargs["http_options"].retry_options
-    assert retries.attempts == 3
+    options = FakeClient.init_kwargs["http_options"]
+    assert options.timeout == 10_000
+    retries = options.retry_options
+    assert retries.attempts == 2
     assert retries.http_status_codes == [408, 429, 500, 502, 503, 504]
 
 
